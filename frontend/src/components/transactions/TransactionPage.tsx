@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { transactionService } from '../../services/transactions';
 import { categoryService } from '../../services/categories';
 import type { Transaction, TransactionFilter } from '../../types';
@@ -73,24 +74,26 @@ export default function TransactionPage({ type, title }: Props) {
     queryClient.invalidateQueries({ queryKey: ['dashboard-limits'] });
   };
 
+  type TransactionData = Omit<Transaction, 'id' | 'user_id' | 'category_name' | 'created_at' | 'updated_at'>;
+
   const createMutation = useMutation({
-    mutationFn: (data: any) => transactionService.create(data),
+    mutationFn: (data: TransactionData) => transactionService.create(data),
     onSuccess: () => {
       invalidateAll();
       closeModal();
       toast.success(type === 'income' ? 'Receita criada' : 'Despesa criada');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao criar'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao criar'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => transactionService.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: TransactionData }) => transactionService.update(id, data),
     onSuccess: () => {
       invalidateAll();
       closeModal();
       toast.success('Atualizado');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
   });
 
   const deleteMutation = useMutation({
@@ -100,7 +103,7 @@ export default function TransactionPage({ type, title }: Props) {
       setDeleting(null);
       toast.success('Excluído');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
   });
 
   const openCreate = () => {

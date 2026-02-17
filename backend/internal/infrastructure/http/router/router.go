@@ -1,6 +1,9 @@
 package router
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/handler"
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
@@ -15,8 +18,12 @@ type Handlers struct {
 	Admin *handler.AdminHandler
 }
 
-func Setup(r *gin.Engine, jwtSecret string, h Handlers) {
+func Setup(r *gin.Engine, jwtSecret string, staticDir string, h Handlers) {
 	r.Use(middleware.CORS())
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	api := r.Group("/api/v1")
 
@@ -70,4 +77,16 @@ func Setup(r *gin.Engine, jwtSecret string, h Handlers) {
 	admin.DELETE("/users/:id", h.Admin.DeleteUser)
 	admin.POST("/users/:id/reset-password", h.Admin.ResetPassword)
 
+	// Serve frontend static files (production)
+	if staticDir != "" {
+		r.StaticFS("/assets", http.Dir(staticDir+"/assets"))
+
+		r.NoRoute(func(c *gin.Context) {
+			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+				c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+				return
+			}
+			c.File(staticDir + "/index.html")
+		})
+	}
 }

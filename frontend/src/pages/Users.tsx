@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { adminService } from '../services/admin';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -44,7 +45,7 @@ export default function Users() {
       closeModal();
       toast.success('Usuário criado');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao criar usuário'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao criar usuário'),
   });
 
   const updateMutation = useMutation({
@@ -55,7 +56,7 @@ export default function Users() {
       closeModal();
       toast.success('Usuário atualizado');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
   });
 
   const deleteMutation = useMutation({
@@ -65,7 +66,7 @@ export default function Users() {
       setDeleting(null);
       toast.success('Usuário excluído');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
   });
 
   const resetMutation = useMutation({
@@ -76,7 +77,7 @@ export default function Users() {
       setNewPassword('');
       toast.success('Senha redefinida');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao redefinir senha'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao redefinir senha'),
   });
 
   const openCreate = () => {

@@ -14,6 +14,11 @@ function getSubdomain(): string {
     return hostname.replace('.localhost', '');
   }
 
+  // Cloud Run: xxx.run.app → fallback
+  if (hostname.endsWith('.run.app')) {
+    return 'financial';
+  }
+
   // Prod: sub.domain.com → extract first part
   const parts = hostname.split('.');
   if (parts.length >= 3) {

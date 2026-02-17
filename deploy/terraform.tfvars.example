@@ -1,0 +1,5 @@
+project_id  = "my-gcp-project"
+region      = "southamerica-east1"
+db_password = "change-me"
+jwt_secret  = "change-me"
+github_repo = "danielsoro/financial"

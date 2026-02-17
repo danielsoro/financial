@@ -1,17 +1,20 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { expenseLimitService } from '../services/expense-limits';
-import { categoryService } from '../services/categories';
-import type { ExpenseLimit } from '../types';
-import MonthSelector from '../components/ui/MonthSelector';
-import Modal from '../components/ui/Modal';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
-import Autocomplete from '../components/ui/Autocomplete';
-import toast from 'react-hot-toast';
-import { HiPlus, HiPencil, HiTrash } from 'react-icons/hi2';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import { expenseLimitService } from "../services/expense-limits";
+import { categoryService } from "../services/categories";
+import type { ExpenseLimit } from "../types";
+import MonthSelector from "../components/ui/MonthSelector";
+import Modal from "../components/ui/Modal";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Autocomplete from "../components/ui/Autocomplete";
+import toast from "react-hot-toast";
+import { HiPlus, HiPencil, HiTrash } from "react-icons/hi2";
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    value,
+  );
 
 export default function ExpenseLimits() {
   const queryClient = useQueryClient();
@@ -22,54 +25,63 @@ export default function ExpenseLimits() {
   const [editing, setEditing] = useState<ExpenseLimit | null>(null);
   const [deleting, setDeleting] = useState<ExpenseLimit | null>(null);
 
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [amount, setAmount] = useState("");
 
   const { data: limits = [], isLoading } = useQuery({
-    queryKey: ['expense-limits', month, year],
+    queryKey: ["expense-limits", month, year],
     queryFn: () => expenseLimitService.list(month, year).then((r) => r.data),
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', 'expense'],
-    queryFn: () => categoryService.list('expense').then((r) => r.data),
+    queryKey: ["categories", "expense"],
+    queryFn: () => categoryService.list("expense").then((r) => r.data),
   });
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["expense-limits"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard-limits"] });
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data: any) => expenseLimitService.create(data),
+    mutationFn: (data: { category_id?: string; month: number; year: number; amount: number }) =>
+      expenseLimitService.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expense-limits'] });
+      invalidateAll();
       closeModal();
-      toast.success('Teto criado');
+      toast.success("Teto criado");
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao criar'),
+    onError: (err: AxiosError<{ error: string }>) =>
+      toast.error(err.response?.data?.error || "Erro ao criar"),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, amount }: { id: string; amount: number }) =>
       expenseLimitService.update(id, amount),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expense-limits'] });
+      invalidateAll();
       closeModal();
-      toast.success('Teto atualizado');
+      toast.success("Teto atualizado");
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
+    onError: (err: AxiosError<{ error: string }>) =>
+      toast.error(err.response?.data?.error || "Erro ao atualizar"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => expenseLimitService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expense-limits'] });
+      invalidateAll();
       setDeleting(null);
-      toast.success('Teto excluído');
+      toast.success("Teto excluído");
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
+    onError: (err: AxiosError<{ error: string }>) =>
+      toast.error(err.response?.data?.error || "Erro ao excluir"),
   });
 
   const openCreate = () => {
     setEditing(null);
-    setCategoryId('');
-    setAmount('');
+    setCategoryId("");
+    setAmount("");
     setModalOpen(true);
   };
 
@@ -111,7 +123,14 @@ export default function ExpenseLimits() {
       </div>
 
       <div className="mb-6">
-        <MonthSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+        <MonthSelector
+          month={month}
+          year={year}
+          onChange={(m, y) => {
+            setMonth(m);
+            setYear(y);
+          }}
+        />
       </div>
 
       {isLoading ? (
@@ -119,15 +138,18 @@ export default function ExpenseLimits() {
       ) : (
         <div className="space-y-4">
           {limits.length === 0 && (
-            <p className="text-gray-400 text-center py-8">Nenhum teto definido para este mês</p>
+            <p className="text-gray-400 text-center py-8">
+              Nenhum teto definido para este mês
+            </p>
           )}
           {limits.map((limit) => (
             <div key={limit.id} className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium text-gray-900">
                   {limit.category_id
-                    ? (categories.find((c) => c.id === limit.category_id)?.full_path || limit.category_name)
-                    : 'Global (todas as despesas)'}
+                    ? categories.find((c) => c.id === limit.category_id)
+                        ?.full_path || limit.category_name
+                    : "Global (todas as despesas)"}
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-semibold text-gray-900">
@@ -152,22 +174,33 @@ export default function ExpenseLimits() {
         </div>
       )}
 
-      <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Editar Teto' : 'Novo Teto'}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        title={editing ? "Editar Teto" : "Novo Teto"}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           {!editing && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoria
+              </label>
               <Autocomplete
                 value={categoryId}
                 onChange={setCategoryId}
-                options={categories.map((c) => ({ value: c.id, label: c.full_path || c.name }))}
+                options={categories.map((c) => ({
+                  value: c.id,
+                  label: c.full_path || c.name,
+                }))}
                 emptyOptionLabel="Global (todas as despesas)"
                 placeholder="Selecione uma categoria"
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor Limite</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Limite
+            </label>
             <input
               type="number"
               step="0.01"
@@ -179,11 +212,18 @@ export default function ExpenseLimits() {
             />
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
               Cancelar
             </button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              {editing ? 'Salvar' : 'Criar'}
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {editing ? "Salvar" : "Criar"}
             </button>
           </div>
         </form>

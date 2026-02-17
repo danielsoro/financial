@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AxiosError } from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/auth';
 
@@ -19,8 +20,9 @@ export default function Login() {
       const { data } = await authService.login(email, password);
       login(data.token, data.user);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao fazer login');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error: string }>;
+      setError(axiosErr.response?.data?.error || 'Erro ao fazer login');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { categoryService } from '../services/categories';
 import type { Category } from '../types';
 import Modal from '../components/ui/Modal';
@@ -131,7 +132,7 @@ export default function Categories() {
       closeModal();
       toast.success('Categoria criada');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao criar categoria'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao criar categoria'),
   });
 
   const updateMutation = useMutation({
@@ -142,7 +143,7 @@ export default function Categories() {
       closeModal();
       toast.success('Categoria atualizada');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao atualizar'),
   });
 
   const deleteMutation = useMutation({
@@ -152,7 +153,7 @@ export default function Categories() {
       setDeleting(null);
       toast.success('Categoria excluída');
     },
-    onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao excluir'),
   });
 
   const toggleExpand = (id: string) => {

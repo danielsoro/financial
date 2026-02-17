@@ -90,7 +90,7 @@ export default function Dashboard() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(props: any) => `${props.category_name}: ${formatCurrency(props.total)}`}
+                  label={({ category_name, total }: { category_name: string; total: number }) => `${category_name}: ${formatCurrency(total)}`}
                 >
                   {byCategory.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />

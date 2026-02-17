@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AxiosError } from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/auth';
 import toast from 'react-hot-toast';
@@ -22,8 +23,9 @@ export default function Profile() {
       const { data } = await authService.updateProfile({ name, email });
       updateUser(data);
       toast.success('Perfil atualizado com sucesso');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao atualizar perfil');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error: string }>;
+      toast.error(axiosErr.response?.data?.error || 'Erro ao atualizar perfil');
     } finally {
       setSavingProfile(false);
     }
@@ -45,8 +47,9 @@ export default function Profile() {
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Senha alterada com sucesso');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao alterar senha');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error: string }>;
+      toast.error(axiosErr.response?.data?.error || 'Erro ao alterar senha');
     } finally {
       setSavingPassword(false);
     }

@@ -54,7 +54,7 @@ func main() {
 
 	// Router
 	r := gin.Default()
-	router.Setup(r, cfg.JWTSecret, handlers)
+	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, handlers)
 
 	log.Printf("Server starting on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
