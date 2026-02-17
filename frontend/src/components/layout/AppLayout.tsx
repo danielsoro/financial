@@ -8,6 +8,7 @@ import {
   HiShieldCheck,
   HiArrowRightOnRectangle,
   HiPencilSquare,
+  HiUserGroup,
 } from 'react-icons/hi2';
 
 const navItems = [
@@ -21,6 +22,8 @@ const navItems = [
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   return (
     <div className="flex min-h-screen">
@@ -50,6 +53,28 @@ export default function AppLayout() {
               {item.label}
             </NavLink>
           ))}
+
+          {/* Admin Section */}
+          {isAdmin && (
+            <>
+              <div className="pt-4 pb-1 px-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Administração</p>
+              </div>
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`
+                }
+              >
+                <HiUserGroup className="h-5 w-5" />
+                Usuários
+              </NavLink>
+            </>
+          )}
         </nav>
 
         {/* User Info + Logout */}

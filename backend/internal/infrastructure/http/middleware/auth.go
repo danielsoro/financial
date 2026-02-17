@@ -47,11 +47,30 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
+		tenantIDStr, _ := claims["tenant_id"].(string)
+		tenantID, err := uuid.Parse(tenantIDStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid tenant id in token"})
+			return
+		}
+
+		role, _ := claims["role"].(string)
+
 		c.Set("userID", userID)
+		c.Set("tenantID", tenantID)
+		c.Set("role", role)
 		c.Next()
 	}
 }
 
 func GetUserID(c *gin.Context) uuid.UUID {
 	return c.MustGet("userID").(uuid.UUID)
+}
+
+func GetTenantID(c *gin.Context) uuid.UUID {
+	return c.MustGet("tenantID").(uuid.UUID)
+}
+
+func GetRole(c *gin.Context) string {
+	return c.MustGet("role").(string)
 }

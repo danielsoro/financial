@@ -17,33 +17,32 @@ func NewCategoryUsecase(repo repository.CategoryRepository) *CategoryUsecase {
 	return &CategoryUsecase{categoryRepo: repo}
 }
 
-func (uc *CategoryUsecase) List(ctx context.Context, userID uuid.UUID, catType string) ([]entity.Category, error) {
-	return uc.categoryRepo.FindAllForUser(ctx, userID, catType)
+func (uc *CategoryUsecase) List(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
+	return uc.categoryRepo.FindAllForTenant(ctx, tenantID, catType)
 }
 
-func (uc *CategoryUsecase) ListTree(ctx context.Context, userID uuid.UUID, catType string) ([]entity.Category, error) {
-	cats, err := uc.categoryRepo.FindAllForUser(ctx, userID, catType)
+func (uc *CategoryUsecase) ListTree(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
+	cats, err := uc.categoryRepo.FindAllForTenant(ctx, tenantID, catType)
 	if err != nil {
 		return nil, err
 	}
 	return buildTree(cats), nil
 }
 
-func (uc *CategoryUsecase) Create(ctx context.Context, userID uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
+func (uc *CategoryUsecase) Create(ctx context.Context, tenantID, userID uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
 	if parentID != nil {
 		parent, err := uc.categoryRepo.FindByID(ctx, *parentID)
 		if err != nil {
 			return nil, err
 		}
-		// Parent must be accessible by the user (default or owned)
-		if parent.UserID != nil && *parent.UserID != userID {
+		if parent.TenantID != tenantID {
 			return nil, domain.ErrForbidden
 		}
-		// Subcategory inherits type from parent
 		catType = parent.Type
 	}
 
 	cat := &entity.Category{
+		TenantID:  tenantID,
 		UserID:    &userID,
 		ParentID:  parentID,
 		Name:      name,
@@ -56,30 +55,26 @@ func (uc *CategoryUsecase) Create(ctx context.Context, userID uuid.UUID, name, c
 	return cat, nil
 }
 
-func (uc *CategoryUsecase) Update(ctx context.Context, userID uuid.UUID, id uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
+func (uc *CategoryUsecase) Update(ctx context.Context, tenantID uuid.UUID, id uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
 	cat, err := uc.categoryRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if cat.IsDefault || cat.UserID == nil || *cat.UserID != userID {
+	if cat.IsDefault || cat.TenantID != tenantID {
 		return nil, domain.ErrForbidden
 	}
 
-	// If parent is being changed, validate
 	if parentID != nil {
-		// Cannot set parent to self
 		if *parentID == id {
 			return nil, domain.ErrCyclicCategory
 		}
-		// Validate parent exists and is accessible
 		parent, err := uc.categoryRepo.FindByID(ctx, *parentID)
 		if err != nil {
 			return nil, err
 		}
-		if parent.UserID != nil && *parent.UserID != userID {
+		if parent.TenantID != tenantID {
 			return nil, domain.ErrForbidden
 		}
-		// Check for cycles: walk up from the proposed parent to make sure we don't reach `id`
 		if err := uc.checkCycle(ctx, *parentID, id); err != nil {
 			return nil, err
 		}
@@ -94,7 +89,6 @@ func (uc *CategoryUsecase) Update(ctx context.Context, userID uuid.UUID, id uuid
 	return cat, nil
 }
 
-// checkCycle walks up the ancestor chain from startID and returns ErrCyclicCategory if it reaches targetID.
 func (uc *CategoryUsecase) checkCycle(ctx context.Context, startID, targetID uuid.UUID) error {
 	currentID := startID
 	for {
@@ -103,7 +97,7 @@ func (uc *CategoryUsecase) checkCycle(ctx context.Context, startID, targetID uui
 			return err
 		}
 		if cat.ParentID == nil {
-			return nil // reached root, no cycle
+			return nil
 		}
 		if *cat.ParentID == targetID {
 			return domain.ErrCyclicCategory
@@ -112,12 +106,12 @@ func (uc *CategoryUsecase) checkCycle(ctx context.Context, startID, targetID uui
 	}
 }
 
-func (uc *CategoryUsecase) Delete(ctx context.Context, userID uuid.UUID, id uuid.UUID) error {
+func (uc *CategoryUsecase) Delete(ctx context.Context, tenantID uuid.UUID, id uuid.UUID) error {
 	cat, err := uc.categoryRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if cat.IsDefault || cat.UserID == nil || *cat.UserID != userID {
+	if cat.IsDefault || cat.TenantID != tenantID {
 		return domain.ErrForbidden
 	}
 	inUse, err := uc.categoryRepo.IsSubtreeInUse(ctx, id)
@@ -130,18 +124,15 @@ func (uc *CategoryUsecase) Delete(ctx context.Context, userID uuid.UUID, id uuid
 	return uc.categoryRepo.Delete(ctx, id)
 }
 
-// buildTree converts a flat sorted list into a tree structure.
 func buildTree(cats []entity.Category) []entity.Category {
 	catMap := make(map[uuid.UUID]*entity.Category, len(cats))
 	var roots []entity.Category
 
-	// First pass: put all in map
 	for i := range cats {
 		cats[i].Children = []entity.Category{}
 		catMap[cats[i].ID] = &cats[i]
 	}
 
-	// Second pass: build parent-child relationships
 	for i := range cats {
 		if cats[i].ParentID != nil {
 			if parent, ok := catMap[*cats[i].ParentID]; ok {
@@ -152,7 +143,6 @@ func buildTree(cats []entity.Category) []entity.Category {
 		}
 	}
 
-	// Recursively set children from map (since we modified pointers)
 	var setChildren func(cats []entity.Category) []entity.Category
 	setChildren = func(cats []entity.Category) []entity.Category {
 		for i := range cats {

@@ -32,12 +32,12 @@ type updateLimitRequest struct {
 }
 
 func (h *ExpenseLimitHandler) List(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	now := time.Now()
 	month, _ := strconv.Atoi(c.DefaultQuery("month", strconv.Itoa(int(now.Month()))))
 	year, _ := strconv.Atoi(c.DefaultQuery("year", strconv.Itoa(now.Year())))
 
-	limits, err := h.uc.List(c.Request.Context(), userID, month, year)
+	limits, err := h.uc.List(c.Request.Context(), tenantID, month, year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -47,6 +47,7 @@ func (h *ExpenseLimitHandler) List(c *gin.Context) {
 }
 
 func (h *ExpenseLimitHandler) Create(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
 	userID := middleware.GetUserID(c)
 	var req expenseLimitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,10 +56,11 @@ func (h *ExpenseLimitHandler) Create(c *gin.Context) {
 	}
 
 	limit := &entity.ExpenseLimit{
-		UserID: userID,
-		Month:  req.Month,
-		Year:   req.Year,
-		Amount: req.Amount,
+		TenantID: tenantID,
+		UserID:   userID,
+		Month:    req.Month,
+		Year:     req.Year,
+		Amount:   req.Amount,
 	}
 
 	if req.CategoryID != nil && *req.CategoryID != "" {
@@ -80,7 +82,7 @@ func (h *ExpenseLimitHandler) Create(c *gin.Context) {
 }
 
 func (h *ExpenseLimitHandler) Update(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -93,7 +95,7 @@ func (h *ExpenseLimitHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.uc.Update(c.Request.Context(), userID, id, req.Amount); err != nil {
+	if err := h.uc.Update(c.Request.Context(), tenantID, id, req.Amount); err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
@@ -103,14 +105,14 @@ func (h *ExpenseLimitHandler) Update(c *gin.Context) {
 }
 
 func (h *ExpenseLimitHandler) Delete(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	if err := h.uc.Delete(c.Request.Context(), userID, id); err != nil {
+	if err := h.uc.Delete(c.Request.Context(), tenantID, id); err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return

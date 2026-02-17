@@ -12,4 +12,7 @@ var (
 	ErrDuplicateLimit    = errors.New("expense limit already exists for this period")
 	ErrCyclicCategory    = errors.New("cannot create cyclic category hierarchy")
 	ErrInvalidPassword   = errors.New("current password is incorrect")
+	ErrTenantNotFound    = errors.New("tenant not found")
+	ErrDuplicateDomain   = errors.New("domain already in use")
+	ErrInvalidRole       = errors.New("invalid role")
 )

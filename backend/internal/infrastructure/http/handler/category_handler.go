@@ -26,12 +26,12 @@ type categoryRequest struct {
 }
 
 func (h *CategoryHandler) List(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	catType := c.Query("type")
 	view := c.DefaultQuery("view", "flat")
 
 	if view == "tree" {
-		categories, err := h.uc.ListTree(c.Request.Context(), userID, catType)
+		categories, err := h.uc.ListTree(c.Request.Context(), tenantID, catType)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
@@ -40,7 +40,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.uc.List(c.Request.Context(), userID, catType)
+	categories, err := h.uc.List(c.Request.Context(), tenantID, catType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -50,6 +50,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 }
 
 func (h *CategoryHandler) Create(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
 	userID := middleware.GetUserID(c)
 	var req categoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -67,7 +68,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 		parentID = &parsed
 	}
 
-	cat, err := h.uc.Create(c.Request.Context(), userID, req.Name, req.Type, parentID)
+	cat, err := h.uc.Create(c.Request.Context(), tenantID, userID, req.Name, req.Type, parentID)
 	if err != nil {
 		if errors.Is(err, domain.ErrDuplicateCategory) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -82,7 +83,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 }
 
 func (h *CategoryHandler) Update(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -105,7 +106,7 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 		parentID = &parsed
 	}
 
-	cat, err := h.uc.Update(c.Request.Context(), userID, id, req.Name, req.Type, parentID)
+	cat, err := h.uc.Update(c.Request.Context(), tenantID, id, req.Name, req.Type, parentID)
 	if err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
@@ -116,14 +117,14 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 }
 
 func (h *CategoryHandler) Delete(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	if err := h.uc.Delete(c.Request.Context(), userID, id); err != nil {
+	if err := h.uc.Delete(c.Request.Context(), tenantID, id); err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
@@ -146,10 +147,16 @@ func mapDomainError(err error) int {
 		return http.StatusConflict
 	case errors.Is(err, domain.ErrDuplicateLimit):
 		return http.StatusConflict
+	case errors.Is(err, domain.ErrDuplicateDomain):
+		return http.StatusConflict
 	case errors.Is(err, domain.ErrCyclicCategory):
 		return http.StatusBadRequest
 	case errors.Is(err, domain.ErrInvalidPassword):
 		return http.StatusBadRequest
+	case errors.Is(err, domain.ErrInvalidRole):
+		return http.StatusBadRequest
+	case errors.Is(err, domain.ErrTenantNotFound):
+		return http.StatusNotFound
 	default:
 		return http.StatusInternalServerError
 	}

@@ -1,7 +1,9 @@
 export interface User {
   id: string;
+  tenant_id: string | null;
   name: string;
   email: string;
+  role: 'super_admin' | 'admin' | 'user';
   created_at: string;
   updated_at: string;
 }
@@ -9,6 +11,25 @@ export interface User {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  domain: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUser {
+  id: string;
+  tenant_id: string | null;
+  name: string;
+  email: string;
+  role: 'super_admin' | 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Category {

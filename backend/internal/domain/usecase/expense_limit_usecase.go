@@ -17,32 +17,32 @@ func NewExpenseLimitUsecase(repo repository.ExpenseLimitRepository) *ExpenseLimi
 	return &ExpenseLimitUsecase{expenseLimitRepo: repo}
 }
 
-func (uc *ExpenseLimitUsecase) List(ctx context.Context, userID uuid.UUID, month, year int) ([]entity.ExpenseLimit, error) {
-	return uc.expenseLimitRepo.FindAll(ctx, userID, month, year)
+func (uc *ExpenseLimitUsecase) List(ctx context.Context, tenantID uuid.UUID, month, year int) ([]entity.ExpenseLimit, error) {
+	return uc.expenseLimitRepo.FindAll(ctx, tenantID, month, year)
 }
 
 func (uc *ExpenseLimitUsecase) Create(ctx context.Context, limit *entity.ExpenseLimit) error {
 	return uc.expenseLimitRepo.Upsert(ctx, limit)
 }
 
-func (uc *ExpenseLimitUsecase) Update(ctx context.Context, userID uuid.UUID, id uuid.UUID, amount float64) error {
+func (uc *ExpenseLimitUsecase) Update(ctx context.Context, tenantID uuid.UUID, id uuid.UUID, amount float64) error {
 	limit, err := uc.expenseLimitRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if limit.UserID != userID {
+	if limit.TenantID != tenantID {
 		return domain.ErrForbidden
 	}
 	limit.Amount = amount
 	return uc.expenseLimitRepo.Update(ctx, limit)
 }
 
-func (uc *ExpenseLimitUsecase) Delete(ctx context.Context, userID uuid.UUID, id uuid.UUID) error {
+func (uc *ExpenseLimitUsecase) Delete(ctx context.Context, tenantID uuid.UUID, id uuid.UUID) error {
 	limit, err := uc.expenseLimitRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if limit.UserID != userID {
+	if limit.TenantID != tenantID {
 		return domain.ErrForbidden
 	}
 	return uc.expenseLimitRepo.Delete(ctx, id)

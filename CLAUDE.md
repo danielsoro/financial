@@ -2,7 +2,16 @@
 
 ## Visão geral
 
-App de finanças pessoais com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais e visualizar resumos no dashboard.
+App de finanças **multi-tenant** com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados são isolados por **tenant** (identificado por subdomínio).
+
+## Multi-Tenancy
+
+- **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`)
+- **3 roles:** `super_admin`, `admin` (gerencia usuários do tenant), `user`
+- **Somente admin cria usuários** — não há registro público
+- **Filtro de dados:** `tenant_id` é o filtro primário em queries; `user_id` permanece para atribuição/auditoria
+- **Super admin default:** `super@admin.com` / `admin123`
+- **Tenant padrão:** domain=`financial`, name=`Financial Demo`
 
 ## Comandos úteis (rodar da raiz `finance/`)
 
@@ -24,23 +33,38 @@ finance/
 │   ├── internal/
 │   │   ├── config/          # Variáveis de ambiente
 │   │   ├── domain/
-│   │   │   ├── entity/      # Entidades de domínio
+│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit)
 │   │   │   ├── repository/  # Interfaces dos repositórios
-│   │   │   └── usecase/     # Casos de uso (regras de negócio)
+│   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
 │   │   └── infrastructure/
 │   │       ├── database/    # Implementação PostgreSQL (pgx)
-│   │       └── http/        # Handlers, middleware, router (Gin)
+│   │       └── http/        # Handlers, middleware (auth, cors, role), router (Gin)
 │   └── migrations/          # SQL migrations (golang-migrate)
 ├── frontend/         # React SPA
 │   └── src/
-│       ├── pages/           # Páginas da aplicação
-│       ├── components/      # Componentes reutilizáveis
-│       ├── services/        # Camada de API (axios)
+│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, Profile, Users
+│       ├── components/      # Layout, auth (ProtectedRoute, AdminRoute), UI
+│       ├── services/        # API (auth, categories, transactions, dashboard, expense-limits, admin)
 │       ├── contexts/        # AuthContext
 │       └── types/           # TypeScript interfaces
 ├── Makefile
 └── docker-compose.yml
 ```
+
+## API Endpoints
+
+### Públicos
+- `POST /api/v1/auth/login` — login com email, password, subdomain
+
+### Protegidos (JWT)
+- Profile: `GET/PUT /profile`, `POST /profile/change-password`
+- Categories: `GET/POST /categories`, `PUT/DELETE /categories/:id`
+- Transactions: `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id`
+- Expense Limits: `GET/POST /expense-limits`, `PUT/DELETE /expense-limits/:id`
+- Dashboard: `GET /dashboard/summary`, `/dashboard/by-category`, `/dashboard/limits-progress`
+
+### Admin (role: admin ou super_admin)
+- `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password`
 
 ## Convenções de código
 
@@ -49,7 +73,7 @@ finance/
 - **Linguagem:** Go 1.25
 - **Framework HTTP:** Gin
 - **Banco:** PostgreSQL via pgx/v5 (sem ORM)
-- **Auth:** JWT (golang-jwt/v5)
+- **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, role
 - **Arquitetura:** Clean Architecture — entity → repository interface → usecase → handler
 - **Erros de domínio** definidos em `internal/domain/errors.go` e mapeados para HTTP status nos handlers
 

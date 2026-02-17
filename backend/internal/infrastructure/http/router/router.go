@@ -12,6 +12,7 @@ type Handlers struct {
 	Transaction  *handler.TransactionHandler
 	ExpenseLimit *handler.ExpenseLimitHandler
 	Dashboard    *handler.DashboardHandler
+	Admin *handler.AdminHandler
 }
 
 func Setup(r *gin.Engine, jwtSecret string, h Handlers) {
@@ -21,7 +22,6 @@ func Setup(r *gin.Engine, jwtSecret string, h Handlers) {
 
 	// Auth (public)
 	auth := api.Group("/auth")
-	auth.POST("/register", h.Auth.Register)
 	auth.POST("/login", h.Auth.Login)
 
 	// Protected routes
@@ -60,4 +60,14 @@ func Setup(r *gin.Engine, jwtSecret string, h Handlers) {
 	dash.GET("/summary", h.Dashboard.Summary)
 	dash.GET("/by-category", h.Dashboard.ByCategory)
 	dash.GET("/limits-progress", h.Dashboard.LimitsProgress)
+
+	// Admin routes (admin + super_admin)
+	admin := protected.Group("/admin")
+	admin.Use(middleware.RequireAdmin())
+	admin.GET("/users", h.Admin.ListUsers)
+	admin.POST("/users", h.Admin.CreateUser)
+	admin.PUT("/users/:id", h.Admin.UpdateUser)
+	admin.DELETE("/users/:id", h.Admin.DeleteUser)
+	admin.POST("/users/:id/reset-password", h.Admin.ResetPassword)
+
 }

@@ -21,14 +21,13 @@ func NewExpenseLimitRepo(pool *pgxpool.Pool) *ExpenseLimitRepo {
 
 func (r *ExpenseLimitRepo) Upsert(ctx context.Context, limit *entity.ExpenseLimit) error {
 	if limit.CategoryID != nil {
-		// Category-specific limit: use ON CONFLICT with the unique index
 		err := r.pool.QueryRow(ctx,
-			`INSERT INTO expense_limits (user_id, category_id, month, year, amount)
-			 VALUES ($1, $2, $3, $4, $5)
-			 ON CONFLICT (user_id, category_id, month, year)
+			`INSERT INTO expense_limits (tenant_id, user_id, category_id, month, year, amount)
+			 VALUES ($1, $2, $3, $4, $5, $6)
+			 ON CONFLICT (tenant_id, category_id, month, year)
 			 DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()
 			 RETURNING id, created_at, updated_at`,
-			limit.UserID, limit.CategoryID, limit.Month, limit.Year, limit.Amount,
+			limit.TenantID, limit.UserID, limit.CategoryID, limit.Month, limit.Year, limit.Amount,
 		).Scan(&limit.ID, &limit.CreatedAt, &limit.UpdatedAt)
 		if err != nil {
 			return err
@@ -36,11 +35,10 @@ func (r *ExpenseLimitRepo) Upsert(ctx context.Context, limit *entity.ExpenseLimi
 		return nil
 	}
 
-	// Global limit (category_id IS NULL): use a CTE to handle the partial unique index
 	err := r.pool.QueryRow(ctx,
 		`WITH existing AS (
 			SELECT id FROM expense_limits
-			WHERE user_id = $1 AND category_id IS NULL AND month = $2 AND year = $3
+			WHERE tenant_id = $1 AND category_id IS NULL AND month = $2 AND year = $3
 		),
 		updated AS (
 			UPDATE expense_limits
@@ -49,15 +47,15 @@ func (r *ExpenseLimitRepo) Upsert(ctx context.Context, limit *entity.ExpenseLimi
 			RETURNING id, created_at, updated_at
 		),
 		inserted AS (
-			INSERT INTO expense_limits (user_id, category_id, month, year, amount)
-			SELECT $1, NULL, $2, $3, $4
+			INSERT INTO expense_limits (tenant_id, user_id, category_id, month, year, amount)
+			SELECT $1, $5, NULL, $2, $3, $4
 			WHERE NOT EXISTS (SELECT 1 FROM existing)
 			RETURNING id, created_at, updated_at
 		)
 		SELECT id, created_at, updated_at FROM updated
 		UNION ALL
 		SELECT id, created_at, updated_at FROM inserted`,
-		limit.UserID, limit.Month, limit.Year, limit.Amount,
+		limit.TenantID, limit.Month, limit.Year, limit.Amount, limit.UserID,
 	).Scan(&limit.ID, &limit.CreatedAt, &limit.UpdatedAt)
 	if err != nil {
 		return err
@@ -96,12 +94,12 @@ func (r *ExpenseLimitRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.
 	var limit entity.ExpenseLimit
 	var categoryName *string
 	err := r.pool.QueryRow(ctx,
-		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,
+		`SELECT el.id, el.tenant_id, el.user_id, el.category_id, c.name AS category_name,
 		        el.month, el.year, el.amount, el.created_at, el.updated_at
 		 FROM expense_limits el
 		 LEFT JOIN categories c ON el.category_id = c.id
 		 WHERE el.id = $1`, id,
-	).Scan(&limit.ID, &limit.UserID, &limit.CategoryID, &categoryName,
+	).Scan(&limit.ID, &limit.TenantID, &limit.UserID, &limit.CategoryID, &categoryName,
 		&limit.Month, &limit.Year, &limit.Amount, &limit.CreatedAt, &limit.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -115,15 +113,15 @@ func (r *ExpenseLimitRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.
 	return &limit, nil
 }
 
-func (r *ExpenseLimitRepo) FindAll(ctx context.Context, userID uuid.UUID, month, year int) ([]entity.ExpenseLimit, error) {
+func (r *ExpenseLimitRepo) FindAll(ctx context.Context, tenantID uuid.UUID, month, year int) ([]entity.ExpenseLimit, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,
+		`SELECT el.id, el.tenant_id, el.user_id, el.category_id, c.name AS category_name,
 		        el.month, el.year, el.amount, el.created_at, el.updated_at
 		 FROM expense_limits el
 		 LEFT JOIN categories c ON el.category_id = c.id
-		 WHERE el.user_id = $1 AND el.month = $2 AND el.year = $3
+		 WHERE el.tenant_id = $1 AND el.month = $2 AND el.year = $3
 		 ORDER BY el.created_at ASC`,
-		userID, month, year,
+		tenantID, month, year,
 	)
 	if err != nil {
 		return nil, err
@@ -134,7 +132,7 @@ func (r *ExpenseLimitRepo) FindAll(ctx context.Context, userID uuid.UUID, month,
 	for rows.Next() {
 		var limit entity.ExpenseLimit
 		var categoryName *string
-		if err := rows.Scan(&limit.ID, &limit.UserID, &limit.CategoryID, &categoryName,
+		if err := rows.Scan(&limit.ID, &limit.TenantID, &limit.UserID, &limit.CategoryID, &categoryName,
 			&limit.Month, &limit.Year, &limit.Amount, &limit.CreatedAt, &limit.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -155,9 +153,9 @@ func (r *ExpenseLimitRepo) FindAll(ctx context.Context, userID uuid.UUID, month,
 	return limits, nil
 }
 
-func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, userID uuid.UUID, month, year int) ([]entity.LimitProgress, error) {
+func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, tenantID uuid.UUID, month, year int) ([]entity.LimitProgress, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,
+		`SELECT el.id, el.tenant_id, el.user_id, el.category_id, c.name AS category_name,
 		        el.month, el.year, el.amount, el.created_at, el.updated_at,
 		        COALESCE(spent.total, 0) AS spent
 		 FROM expense_limits el
@@ -165,7 +163,7 @@ func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, userID uuid.UU
 		 LEFT JOIN LATERAL (
 			SELECT SUM(t.amount) AS total
 			FROM transactions t
-			WHERE t.user_id = el.user_id
+			WHERE t.tenant_id = el.tenant_id
 			  AND t.type = 'expense'
 			  AND EXTRACT(MONTH FROM t.date::date) = el.month
 			  AND EXTRACT(YEAR FROM t.date::date) = el.year
@@ -174,9 +172,9 @@ func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, userID uuid.UU
 				  OR t.category_id = el.category_id
 			  )
 		 ) spent ON true
-		 WHERE el.user_id = $1 AND el.month = $2 AND el.year = $3
+		 WHERE el.tenant_id = $1 AND el.month = $2 AND el.year = $3
 		 ORDER BY el.created_at ASC`,
-		userID, month, year,
+		tenantID, month, year,
 	)
 	if err != nil {
 		return nil, err
@@ -188,7 +186,7 @@ func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, userID uuid.UU
 		var lp entity.LimitProgress
 		var categoryName *string
 		if err := rows.Scan(
-			&lp.Limit.ID, &lp.Limit.UserID, &lp.Limit.CategoryID, &categoryName,
+			&lp.Limit.ID, &lp.Limit.TenantID, &lp.Limit.UserID, &lp.Limit.CategoryID, &categoryName,
 			&lp.Limit.Month, &lp.Limit.Year, &lp.Limit.Amount,
 			&lp.Limit.CreatedAt, &lp.Limit.UpdatedAt,
 			&lp.Spent,

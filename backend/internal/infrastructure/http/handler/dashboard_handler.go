@@ -19,10 +19,10 @@ func NewDashboardHandler(uc *usecase.DashboardUsecase) *DashboardHandler {
 }
 
 func (h *DashboardHandler) Summary(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 
-	summary, err := h.uc.GetSummary(c.Request.Context(), userID, month, year)
+	summary, err := h.uc.GetSummary(c.Request.Context(), tenantID, month, year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -32,11 +32,11 @@ func (h *DashboardHandler) Summary(c *gin.Context) {
 }
 
 func (h *DashboardHandler) ByCategory(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 	txType := c.DefaultQuery("type", "expense")
 
-	data, err := h.uc.GetByCategory(c.Request.Context(), userID, month, year, txType)
+	data, err := h.uc.GetByCategory(c.Request.Context(), tenantID, month, year, txType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -46,10 +46,10 @@ func (h *DashboardHandler) ByCategory(c *gin.Context) {
 }
 
 func (h *DashboardHandler) LimitsProgress(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 
-	progress, err := h.uc.GetLimitsProgress(c.Request.Context(), userID, month, year)
+	progress, err := h.uc.GetLimitsProgress(c.Request.Context(), tenantID, month, year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return

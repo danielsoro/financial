@@ -28,10 +28,10 @@ type transactionRequest struct {
 }
 
 func (h *TransactionHandler) List(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 
 	filter := entity.TransactionFilter{
-		UserID:    userID,
+		TenantID:  tenantID,
 		Type:      c.Query("type"),
 		StartDate: c.Query("start_date"),
 		EndDate:   c.Query("end_date"),
@@ -57,14 +57,14 @@ func (h *TransactionHandler) List(c *gin.Context) {
 }
 
 func (h *TransactionHandler) GetByID(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	tx, err := h.uc.GetByID(c.Request.Context(), userID, id)
+	tx, err := h.uc.GetByID(c.Request.Context(), tenantID, id)
 	if err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
@@ -75,6 +75,7 @@ func (h *TransactionHandler) GetByID(c *gin.Context) {
 }
 
 func (h *TransactionHandler) Create(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
 	userID := middleware.GetUserID(c)
 	var req transactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -84,6 +85,7 @@ func (h *TransactionHandler) Create(c *gin.Context) {
 
 	catID, _ := uuid.Parse(req.CategoryID)
 	tx := &entity.Transaction{
+		TenantID:    tenantID,
 		UserID:      userID,
 		CategoryID:  catID,
 		Type:        req.Type,
@@ -101,7 +103,7 @@ func (h *TransactionHandler) Create(c *gin.Context) {
 }
 
 func (h *TransactionHandler) Update(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -124,7 +126,7 @@ func (h *TransactionHandler) Update(c *gin.Context) {
 		Date:        req.Date,
 	}
 
-	if err := h.uc.Update(c.Request.Context(), userID, tx); err != nil {
+	if err := h.uc.Update(c.Request.Context(), tenantID, tx); err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
@@ -134,14 +136,14 @@ func (h *TransactionHandler) Update(c *gin.Context) {
 }
 
 func (h *TransactionHandler) Delete(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	tenantID := middleware.GetTenantID(c)
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	if err := h.uc.Delete(c.Request.Context(), userID, id); err != nil {
+	if err := h.uc.Delete(c.Request.Context(), tenantID, id); err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return

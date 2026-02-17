@@ -23,14 +23,14 @@ func NewDashboardUsecase(
 	}
 }
 
-func (uc *DashboardUsecase) GetSummary(ctx context.Context, userID uuid.UUID, month, year int) (*entity.DashboardSummary, error) {
-	return uc.transactionRepo.GetSummary(ctx, userID, month, year)
+func (uc *DashboardUsecase) GetSummary(ctx context.Context, tenantID uuid.UUID, month, year int) (*entity.DashboardSummary, error) {
+	return uc.transactionRepo.GetSummary(ctx, tenantID, month, year)
 }
 
-func (uc *DashboardUsecase) GetByCategory(ctx context.Context, userID uuid.UUID, month, year int, txType string) ([]entity.CategoryTotal, error) {
-	return uc.transactionRepo.GetByCategory(ctx, userID, month, year, txType)
+func (uc *DashboardUsecase) GetByCategory(ctx context.Context, tenantID uuid.UUID, month, year int, txType string) ([]entity.CategoryTotal, error) {
+	return uc.transactionRepo.GetByCategory(ctx, tenantID, month, year, txType)
 }
 
-func (uc *DashboardUsecase) GetLimitsProgress(ctx context.Context, userID uuid.UUID, month, year int) ([]entity.LimitProgress, error) {
-	return uc.expenseLimitRepo.GetLimitsProgress(ctx, userID, month, year)
+func (uc *DashboardUsecase) GetLimitsProgress(ctx context.Context, tenantID uuid.UUID, month, year int) ([]entity.LimitProgress, error) {
+	return uc.expenseLimitRepo.GetLimitsProgress(ctx, tenantID, month, year)
 }

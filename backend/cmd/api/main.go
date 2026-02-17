@@ -28,13 +28,15 @@ func main() {
 	}
 
 	// Repositories
+	tenantRepo := database.NewTenantRepo(pool)
 	userRepo := database.NewUserRepo(pool)
 	categoryRepo := database.NewCategoryRepo(pool)
 	transactionRepo := database.NewTransactionRepo(pool)
 	expenseLimitRepo := database.NewExpenseLimitRepo(pool)
 
 	// Usecases
-	authUC := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret)
+	authUC := usecase.NewAuthUsecase(userRepo, tenantRepo, cfg.JWTSecret)
+	adminUC := usecase.NewAdminUsecase(userRepo)
 	categoryUC := usecase.NewCategoryUsecase(categoryRepo)
 	transactionUC := usecase.NewTransactionUsecase(transactionRepo)
 	expenseLimitUC := usecase.NewExpenseLimitUsecase(expenseLimitRepo)
@@ -43,6 +45,7 @@ func main() {
 	// Handlers
 	handlers := router.Handlers{
 		Auth:         handler.NewAuthHandler(authUC),
+		Admin:    handler.NewAdminHandler(adminUC),
 		Category:     handler.NewCategoryHandler(categoryUC),
 		Transaction:  handler.NewTransactionHandler(transactionUC),
 		ExpenseLimit: handler.NewExpenseLimitHandler(expenseLimitUC),

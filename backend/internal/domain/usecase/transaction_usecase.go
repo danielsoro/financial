@@ -21,12 +21,12 @@ func (uc *TransactionUsecase) List(ctx context.Context, filter entity.Transactio
 	return uc.transactionRepo.FindAll(ctx, filter)
 }
 
-func (uc *TransactionUsecase) GetByID(ctx context.Context, userID, id uuid.UUID) (*entity.Transaction, error) {
+func (uc *TransactionUsecase) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*entity.Transaction, error) {
 	tx, err := uc.transactionRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if tx.UserID != userID {
+	if tx.TenantID != tenantID {
 		return nil, domain.ErrForbidden
 	}
 	return tx, nil
@@ -36,23 +36,23 @@ func (uc *TransactionUsecase) Create(ctx context.Context, tx *entity.Transaction
 	return uc.transactionRepo.Create(ctx, tx)
 }
 
-func (uc *TransactionUsecase) Update(ctx context.Context, userID uuid.UUID, tx *entity.Transaction) error {
+func (uc *TransactionUsecase) Update(ctx context.Context, tenantID uuid.UUID, tx *entity.Transaction) error {
 	existing, err := uc.transactionRepo.FindByID(ctx, tx.ID)
 	if err != nil {
 		return err
 	}
-	if existing.UserID != userID {
+	if existing.TenantID != tenantID {
 		return domain.ErrForbidden
 	}
 	return uc.transactionRepo.Update(ctx, tx)
 }
 
-func (uc *TransactionUsecase) Delete(ctx context.Context, userID, id uuid.UUID) error {
+func (uc *TransactionUsecase) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
 	tx, err := uc.transactionRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if tx.UserID != userID {
+	if tx.TenantID != tenantID {
 		return domain.ErrForbidden
 	}
 	return uc.transactionRepo.Delete(ctx, id)

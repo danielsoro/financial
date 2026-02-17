@@ -13,31 +13,16 @@ import (
 )
 
 type AuthUsecase struct {
-	userRepo  repository.UserRepository
-	jwtSecret string
+	userRepo   repository.UserRepository
+	tenantRepo repository.TenantRepository
+	jwtSecret  string
 }
 
-func NewAuthUsecase(repo repository.UserRepository, jwtSecret string) *AuthUsecase {
-	return &AuthUsecase{userRepo: repo, jwtSecret: jwtSecret}
+func NewAuthUsecase(userRepo repository.UserRepository, tenantRepo repository.TenantRepository, jwtSecret string) *AuthUsecase {
+	return &AuthUsecase{userRepo: userRepo, tenantRepo: tenantRepo, jwtSecret: jwtSecret}
 }
 
-func (uc *AuthUsecase) Register(ctx context.Context, name, email, password string) (string, *entity.User, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", nil, err
-	}
-	user := &entity.User{Name: name, Email: email, PasswordHash: string(hash)}
-	if err := uc.userRepo.Create(ctx, user); err != nil {
-		return "", nil, err
-	}
-	token, err := uc.generateToken(user)
-	if err != nil {
-		return "", nil, err
-	}
-	return token, user, nil
-}
-
-func (uc *AuthUsecase) Login(ctx context.Context, email, password string) (string, *entity.User, error) {
+func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain string) (string, *entity.User, error) {
 	user, err := uc.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if err == domain.ErrNotFound {
@@ -48,7 +33,28 @@ func (uc *AuthUsecase) Login(ctx context.Context, email, password string) (strin
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return "", nil, domain.ErrInvalidCredentials
 	}
-	token, err := uc.generateToken(user)
+
+	// Resolve tenant from subdomain
+	if subdomain == "" {
+		return "", nil, domain.ErrInvalidCredentials
+	}
+	tenant, err := uc.tenantRepo.FindByDomain(ctx, subdomain)
+	if err != nil {
+		return "", nil, domain.ErrInvalidCredentials
+	}
+	if !tenant.IsActive {
+		return "", nil, domain.ErrForbidden
+	}
+
+	// Non-super_admin must belong to the resolved tenant
+	if user.Role != "super_admin" {
+		if user.TenantID == nil || *user.TenantID != tenant.ID {
+			return "", nil, domain.ErrInvalidCredentials
+		}
+	}
+
+	// JWT always gets the resolved tenant ID (from subdomain)
+	token, err := uc.generateToken(user, tenant.ID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -88,11 +94,13 @@ func (uc *AuthUsecase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 	return uc.userRepo.Update(ctx, user)
 }
 
-func (uc *AuthUsecase) generateToken(user *entity.User) (string, error) {
+func (uc *AuthUsecase) generateToken(user *entity.User, tenantID uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
-		"sub": user.ID.String(),
-		"exp": time.Now().Add(72 * time.Hour).Unix(),
-		"iat": time.Now().Unix(),
+		"sub":       user.ID.String(),
+		"tenant_id": tenantID.String(),
+		"role":      user.Role,
+		"exp":       time.Now().Add(72 * time.Hour).Unix(),
+		"iat":       time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(uc.jwtSecret))
