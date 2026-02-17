@@ -90,7 +90,8 @@ export default function Dashboard() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ category_name, total }: { category_name: string; total: number }) => `${category_name}: ${formatCurrency(total)}`}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  label={((props: Record<string, any>) => `${props.category_name}: ${formatCurrency(props.total)}`) as any}
                 >
                   {byCategory.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
