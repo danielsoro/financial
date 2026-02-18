@@ -4,7 +4,7 @@ App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e de
 
 ## Tech Stack
 
-**Backend:** Go 1.25 | Gin | pgx/v5 | JWT | golang-migrate
+**Backend:** Go 1.26 | Gin | pgx/v5 | JWT | golang-migrate
 
 **Frontend:** React 19 | TypeScript 5.9 | Vite 7 | Tailwind CSS v4 | TanStack Query v5
 
@@ -12,7 +12,7 @@ App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e de
 
 ## Pre-requisitos
 
-- Go 1.25+
+- Go 1.26+
 - Node.js 22+
 - Docker e Docker Compose
 
@@ -50,9 +50,10 @@ finance/
 │   │   │   ├── usecase/     # Casos de uso
 │   │   │   └── errors.go    # Erros de dominio
 │   │   └── infrastructure/
-│   │       ├── database/    # Implementacao PostgreSQL (pgx)
+│   │       ├── database/    # Implementacao PostgreSQL (pgx), SchemaManager, TenantCache
 │   │       └── http/        # Handlers, middleware, router (Gin)
-│   └── migrations/          # SQL migrations
+│   ├── migrations/          # Public migrations (tabela tenants)
+│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits)
 ├── frontend/
 │   └── src/
 │       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, Profile, Users
@@ -73,6 +74,7 @@ Base: `/api/v1`
 
 | Grupo | Endpoints |
 |-------|-----------|
+| Health | `GET /health` |
 | Auth | `POST /auth/login` |
 | Profile | `GET/PUT /profile`, `POST /profile/change-password` |
 | Categories | `GET/POST /categories`, `PUT/DELETE /categories/:id` |
@@ -83,10 +85,14 @@ Base: `/api/v1`
 
 ## Multi-Tenancy
 
+- **Schema-per-tenant:** cada tenant tem seu proprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
 - Tenant identificado por subdominio (`financial.localhost` -> tenant `financial`)
+- Tabela `tenants` no schema `public` como registro central (id, name, domain, schema_name, is_active)
+- Isolamento por schema; queries usam `SET search_path` por conexao
 - 2 roles: `admin` (gerencia usuarios do tenant) e `user`
 - Somente admin cria usuarios — nao ha registro publico
-- `tenant_id` e o filtro primario em todas as queries
+- Admin padrao por tenant: `admin@admin.com` / `admin123` (seed automatico)
+- Novo tenant: adicionar ao env `TENANTS` (ou `var.tenants` no Terraform) → app cria schema + seed no startup
 
 ## CI/CD
 

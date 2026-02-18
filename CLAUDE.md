@@ -22,6 +22,7 @@ App de finanças **multi-tenant** com **Go backend** + **React frontend** + **Po
 | Comando | O que faz |
 |---------|-----------|
 | `make db` | Sobe PostgreSQL via Docker Compose |
+| `make db-down` | Para o PostgreSQL |
 | `make dev` | Roda backend com hot-reload (air) |
 | `make run` | Roda backend sem hot-reload |
 | `make migrate` | Executa migrations pendentes |
@@ -53,6 +54,9 @@ finance/
 │       ├── services/        # API (auth, categories, transactions, dashboard, expense-limits, admin)
 │       ├── contexts/        # AuthContext
 │       └── types/           # TypeScript interfaces
+├── deploy/           # Terraform (Cloud Run, Cloud SQL, IAM, Secrets, Cloudflare DNS)
+├── .github/workflows/ # CI/CD (lint, build, deploy, infra)
+├── Dockerfile        # Multi-stage: frontend + backend
 ├── Makefile
 └── docker-compose.yml
 ```
@@ -76,7 +80,7 @@ finance/
 
 ### Backend
 
-- **Linguagem:** Go 1.25
+- **Linguagem:** Go 1.26
 - **Framework HTTP:** Gin
 - **Banco:** PostgreSQL via pgx/v5 (sem ORM)
 - **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, role
