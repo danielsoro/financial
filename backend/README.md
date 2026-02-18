@@ -3,7 +3,7 @@
 API REST multi-tenant para gestão de finanças.
 
 ## Tecnologias
-
+ 
 - **Go 1.25** — linguagem principal
 - **Gin** — framework HTTP
 - **pgx/v5** — driver PostgreSQL (sem ORM)
