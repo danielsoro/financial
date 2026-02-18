@@ -31,3 +31,21 @@ resource "cloudflare_record" "tenant" {
   proxied = true
   ttl     = 1
 }
+
+resource "cloudflare_ruleset" "origin_rules" {
+  zone_id     = local.zone_id
+  name        = "Origin Rules"
+  description = "Rewrite Host header to Cloud Run hostname"
+  kind        = "zone"
+  phase       = "http_request_origin"
+
+  rules {
+    action = "route"
+    action_parameters {
+      host_header = local.cloud_run_hostname
+    }
+    expression  = "true"
+    description = "Set Host header to Cloud Run hostname"
+    enabled     = true
+  }
+}

@@ -7,20 +7,22 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	JWTSecret   string
-	Port        string
-	StaticDir   string
+	DatabaseURL   string
+	JWTSecret     string
+	Port          string
+	StaticDir     string
+	AllowedOrigin string
 }
 
 func Load() *Config {
 	godotenv.Load()
 
 	cfg := &Config{
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		JWTSecret:   os.Getenv("JWT_SECRET"),
-		Port:        os.Getenv("PORT"),
-		StaticDir:   os.Getenv("STATIC_DIR"),
+		DatabaseURL:   os.Getenv("DATABASE_URL"),
+		JWTSecret:     os.Getenv("JWT_SECRET"),
+		Port:          os.Getenv("PORT"),
+		StaticDir:     os.Getenv("STATIC_DIR"),
+		AllowedOrigin: os.Getenv("ALLOWED_ORIGIN"),
 	}
 
 	if cfg.Port == "" {
