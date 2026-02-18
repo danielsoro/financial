@@ -33,12 +33,11 @@ docker tag "finance:${IMAGE_TAG}" "${IMAGE}"
 echo "==> Pushing image..."
 docker push "${IMAGE}"
 
-# Step 3: Deploy to Cloud Run
-echo "==> Deploying to Cloud Run..."
-gcloud run deploy finance \
-  --image "${IMAGE}" \
-  --region "${REGION}" \
-  --project "${PROJECT_ID}"
+# Step 3: Deploy via Terraform
+echo "==> Deploying via Terraform (image_tag=${IMAGE_TAG})..."
+cd "$SCRIPT_DIR"
+terraform init -input=false
+terraform apply -auto-approve -input=false -var="image_tag=${IMAGE_TAG}"
 
 echo ""
 echo "==> Deploy complete!"

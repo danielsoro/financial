@@ -10,7 +10,7 @@ resource "google_project_iam_member" "cloud_sql_client" {
 }
 
 locals {
-  image_url          = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.finance.repository_id}/finance:latest"
+  image_url          = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.finance.repository_id}/finance:${var.image_tag}"
   db_connection_name = google_sql_database_instance.finance.connection_name
 }
 
@@ -90,13 +90,6 @@ resource "google_cloud_run_v2_service" "finance" {
     google_secret_manager_secret_version.jwt_secret,
   ]
 
-  # Image is managed by the deploy workflow (deploy.yml), not Terraform.
-  # Terraform creates the service; deploys update the image via gcloud.
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].image,
-    ]
-  }
 }
 
 # Allow public access

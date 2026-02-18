@@ -25,3 +25,9 @@ variable "github_repo" {
   type        = string
   description = "GitHub repository (owner/repo) allowed to authenticate via Workload Identity Federation"
 }
+
+variable "image_tag" {
+  type        = string
+  default     = "latest"
+  description = "Docker image tag to deploy to Cloud Run"
+}
