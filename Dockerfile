@@ -15,7 +15,7 @@ COPY backend/ .
 RUN CGO_ENABLED=0 go build -o /api ./cmd/api
 
 # Stage 3: Final image
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=backend /api .
