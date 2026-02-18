@@ -20,6 +20,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=backend /api .
 COPY --from=backend /app/migrations/ ./migrations/
+COPY --from=backend /app/tenant_migrations/ ./tenant_migrations/
 COPY --from=frontend /app/dist/ ./static/
 EXPOSE 8080
 ENV STATIC_DIR=./static
