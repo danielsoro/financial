@@ -1,6 +1,6 @@
 module github.com/dcunha/finance/backend
 
-go 1.25.6
+go 1.26
 
 require (
 	github.com/gin-gonic/gin v1.11.0
