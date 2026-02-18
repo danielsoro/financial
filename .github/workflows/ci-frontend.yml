@@ -2,8 +2,6 @@ name: CI Frontend
 
 on:
   pull_request:
-    paths:
-      - 'frontend/**'
 
 defaults:
   run:

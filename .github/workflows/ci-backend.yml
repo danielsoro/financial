@@ -2,8 +2,6 @@ name: CI Backend
 
 on:
   pull_request:
-    paths:
-      - 'backend/**'
 
 defaults:
   run:
