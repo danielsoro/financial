@@ -68,5 +68,6 @@ jobs:
             -var="github_repo=${{ github.repository }}" \
             -var="image_tag=${{ steps.version.outputs.tag }}" \
             -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -var="cloudflare_account_id=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" \
             -var="domain=${{ secrets.DOMAIN }}" \
             -var='tenants=${{ secrets.TENANTS }}'

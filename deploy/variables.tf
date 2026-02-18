@@ -38,6 +38,11 @@ variable "cloudflare_api_token" {
   description = "Cloudflare API token"
 }
 
+variable "cloudflare_account_id" {
+  type        = string
+  description = "Cloudflare account ID"
+}
+
 variable "domain" {
   type        = string
   description = "Root domain (e.g., financeiro.app)"

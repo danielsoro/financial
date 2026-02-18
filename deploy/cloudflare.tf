@@ -32,20 +32,29 @@ resource "cloudflare_record" "tenant" {
   ttl     = 1
 }
 
-resource "cloudflare_ruleset" "origin_rules" {
-  zone_id     = local.zone_id
-  name        = "Origin Rules"
-  description = "Rewrite Host header to Cloud Run hostname"
-  kind        = "zone"
-  phase       = "http_request_origin"
-
-  rules {
-    action = "route"
-    action_parameters {
-      host_header = local.cloud_run_hostname
+resource "cloudflare_worker_script" "origin_rewrite" {
+  account_id = var.cloudflare_account_id
+  name       = "finance-origin-rewrite"
+  content    = <<-JS
+    export default {
+      async fetch(request) {
+        const url = new URL(request.url);
+        url.hostname = "${local.cloud_run_hostname}";
+        return fetch(new Request(url, request));
+      }
     }
-    expression  = "true"
-    description = "Set Host header to Cloud Run hostname"
-    enabled     = true
-  }
+  JS
+  module = true
+}
+
+resource "cloudflare_worker_route" "root" {
+  zone_id     = local.zone_id
+  pattern     = "${var.domain}/*"
+  script_name = cloudflare_worker_script.origin_rewrite.name
+}
+
+resource "cloudflare_worker_route" "subdomains" {
+  zone_id     = local.zone_id
+  pattern     = "*.${var.domain}/*"
+  script_name = cloudflare_worker_script.origin_rewrite.name
 }
