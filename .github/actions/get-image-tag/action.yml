@@ -1,0 +1,15 @@
+name: Get Image Tag
+description: Resolves the Docker image tag from git tag (stripping the v prefix)
+
+outputs:
+  tag:
+    description: Image tag without v prefix
+    value: ${{ steps.resolve.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve image tag
+      id: resolve
+      shell: bash
+      run: echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> "$GITHUB_OUTPUT"
