@@ -23,8 +23,8 @@ variable "jwt_secret" {
 
 variable "image_tag" {
   type        = string
-  default     = "latest"
-  description = "Docker image tag for Cloud Run"
+  default     = ""
+  description = "Docker image tag for Cloud Run (leave empty to use latest git tag)"
 }
 
 variable "github_repo" {

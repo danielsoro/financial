@@ -9,8 +9,15 @@ resource "google_project_iam_member" "cloud_sql_client" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
+data "external" "git_tag" {
+  program = ["bash", "-c", "echo \"{\\\"tag\\\": \\\"$(git describe --tags --abbrev=0 2>/dev/null || echo latest)\\\"}\""]
+
+  working_dir = "${path.module}/.."
+}
+
 locals {
-  image_url         = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.finance.repository_id}/finance:${var.image_tag}"
+  resolved_tag       = var.image_tag != "" ? var.image_tag : data.external.git_tag.result.tag
+  image_url          = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.finance.repository_id}/finance:${local.resolved_tag}"
   db_connection_name = google_sql_database_instance.finance.connection_name
 }
 

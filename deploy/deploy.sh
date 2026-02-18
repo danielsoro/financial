@@ -14,7 +14,7 @@ fi
 PROJECT_ID=$(grep 'project_id' terraform.tfvars | sed 's/.*= *"\(.*\)"/\1/')
 REGION=$(grep 'region' terraform.tfvars | sed 's/.*= *"\(.*\)"/\1/' || echo "southamerica-east1")
 REGION="${REGION:-southamerica-east1}"
-IMAGE_TAG="${1:-latest}"
+IMAGE_TAG="${1:-$(git -C "$PROJECT_ROOT" describe --tags --abbrev=0 2>/dev/null || echo latest)}"
 REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/finance"
 IMAGE="${REPO}/finance:${IMAGE_TAG}"
 
