@@ -21,12 +21,6 @@ variable "jwt_secret" {
   description = "JWT signing secret"
 }
 
-variable "image_tag" {
-  type        = string
-  default     = ""
-  description = "Docker image tag for Cloud Run (leave empty to use latest git tag)"
-}
-
 variable "github_repo" {
   type        = string
   description = "GitHub repository (owner/repo) allowed to authenticate via Workload Identity Federation"

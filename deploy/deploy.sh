@@ -18,16 +18,12 @@ IMAGE_TAG="${1:-$(git -C "$PROJECT_ROOT" describe --tags --abbrev=0 2>/dev/null 
 REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/finance"
 IMAGE="${REPO}/finance:${IMAGE_TAG}"
 
-# Step 1: Ensure infrastructure exists (APIs, Artifact Registry, Cloud SQL, secrets)
-echo "==> Provisioning infrastructure..."
-terraform apply -var "image_tag=${IMAGE_TAG}"
-
-# Step 2: Build Docker image
-echo "==> Building Docker image..."
+# Step 1: Build Docker image
+echo "==> Building Docker image (tag: ${IMAGE_TAG})..."
 cd "$PROJECT_ROOT"
 docker build -t "finance:${IMAGE_TAG}" .
 
-# Step 3: Push to Artifact Registry
+# Step 2: Push to Artifact Registry
 echo "==> Configuring Docker auth for Artifact Registry..."
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
@@ -37,11 +33,12 @@ docker tag "finance:${IMAGE_TAG}" "${IMAGE}"
 echo "==> Pushing image..."
 docker push "${IMAGE}"
 
-# Step 4: Update Cloud Run with the new image
-echo "==> Updating Cloud Run service..."
-cd "$SCRIPT_DIR"
-terraform apply -var "image_tag=${IMAGE_TAG}" -auto-approve
+# Step 3: Deploy to Cloud Run
+echo "==> Deploying to Cloud Run..."
+gcloud run deploy finance \
+  --image "${IMAGE}" \
+  --region "${REGION}" \
+  --project "${PROJECT_ID}"
 
 echo ""
 echo "==> Deploy complete!"
-terraform output cloud_run_url

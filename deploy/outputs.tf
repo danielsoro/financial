@@ -2,12 +2,6 @@ output "cloud_run_url" {
   value       = google_cloud_run_v2_service.finance.uri
   description = "Finance app URL"
 }
-
-output "deployed_image_tag" {
-  value       = local.resolved_tag
-  description = "Docker image tag deployed to Cloud Run"
-}
-
 output "cloud_sql_connection_name" {
   value       = google_sql_database_instance.finance.connection_name
   description = "Cloud SQL instance connection name"
