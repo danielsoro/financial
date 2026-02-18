@@ -19,7 +19,7 @@ func NewAdminUsecase(userRepo repository.UserRepository) *AdminUsecase {
 }
 
 func (uc *AdminUsecase) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]entity.AdminUser, error) {
-	return uc.userRepo.FindAllByTenant(ctx, tenantID)
+	return uc.userRepo.FindAll(ctx)
 }
 
 func (uc *AdminUsecase) CreateUser(ctx context.Context, tenantID uuid.UUID, name, email, password, role string) (*entity.AdminUser, error) {
@@ -31,7 +31,6 @@ func (uc *AdminUsecase) CreateUser(ctx context.Context, tenantID uuid.UUID, name
 		return nil, err
 	}
 	user := &entity.User{
-		TenantID:     tenantID,
 		Name:         name,
 		Email:        email,
 		Role:         role,
@@ -42,7 +41,6 @@ func (uc *AdminUsecase) CreateUser(ctx context.Context, tenantID uuid.UUID, name
 	}
 	return &entity.AdminUser{
 		ID:        user.ID,
-		TenantID:  user.TenantID,
 		Name:      user.Name,
 		Email:     user.Email,
 		Role:      user.Role,
@@ -67,7 +65,6 @@ func (uc *AdminUsecase) UpdateUser(ctx context.Context, id uuid.UUID, name, emai
 	}
 	return &entity.AdminUser{
 		ID:        user.ID,
-		TenantID:  user.TenantID,
 		Name:      user.Name,
 		Email:     user.Email,
 		Role:      user.Role,

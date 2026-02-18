@@ -7,6 +7,7 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/dcunha/finance/backend/internal/domain/repository"
+	"github.com/dcunha/finance/backend/internal/tenant"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -23,6 +24,21 @@ func NewAuthUsecase(userRepo repository.UserRepository, tenantRepo repository.Te
 }
 
 func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain string) (string, *entity.User, error) {
+	// Resolve tenant from subdomain
+	if subdomain == "" {
+		subdomain = "root"
+	}
+	t, err := uc.tenantRepo.FindByDomain(ctx, subdomain)
+	if err != nil {
+		return "", nil, domain.ErrInvalidCredentials
+	}
+	if !t.IsActive {
+		return "", nil, domain.ErrForbidden
+	}
+
+	// Set schema context so queries run in the tenant's schema
+	ctx = tenant.ContextWithSchema(ctx, t.SchemaName)
+
 	user, err := uc.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if err == domain.ErrNotFound {
@@ -34,25 +50,8 @@ func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain str
 		return "", nil, domain.ErrInvalidCredentials
 	}
 
-	// Resolve tenant from subdomain
-	if subdomain == "" {
-		return "", nil, domain.ErrInvalidCredentials
-	}
-	tenant, err := uc.tenantRepo.FindByDomain(ctx, subdomain)
-	if err != nil {
-		return "", nil, domain.ErrInvalidCredentials
-	}
-	if !tenant.IsActive {
-		return "", nil, domain.ErrForbidden
-	}
-
-	// User must belong to the resolved tenant
-	if user.TenantID != tenant.ID {
-		return "", nil, domain.ErrInvalidCredentials
-	}
-
-	// JWT always gets the resolved tenant ID (from subdomain)
-	token, err := uc.generateToken(user, tenant.ID)
+	// JWT always gets the resolved tenant ID (needed for middleware to resolve schema)
+	token, err := uc.generateToken(user, t.ID)
 	if err != nil {
 		return "", nil, err
 	}

@@ -28,10 +28,7 @@ type transactionRequest struct {
 }
 
 func (h *TransactionHandler) List(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
-
 	filter := entity.TransactionFilter{
-		TenantID:  tenantID,
 		Type:      c.Query("type"),
 		StartDate: c.Query("start_date"),
 		EndDate:   c.Query("end_date"),
@@ -75,7 +72,6 @@ func (h *TransactionHandler) GetByID(c *gin.Context) {
 }
 
 func (h *TransactionHandler) Create(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	userID := middleware.GetUserID(c)
 	var req transactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -85,7 +81,6 @@ func (h *TransactionHandler) Create(c *gin.Context) {
 
 	catID, _ := uuid.Parse(req.CategoryID)
 	tx := &entity.Transaction{
-		TenantID:    tenantID,
 		UserID:      userID,
 		CategoryID:  catID,
 		Type:        req.Type,

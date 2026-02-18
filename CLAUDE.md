@@ -6,12 +6,16 @@ App de finanças **multi-tenant** com **Go backend** + **React frontend** + **Po
 
 ## Multi-Tenancy
 
-- **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`)
+- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
+- **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`, `localhost` → tenant `root`)
+- **Tabela `tenants`** no schema `public` como registro central (id, name, domain, schema_name, is_active)
+- **Isolamento:** dados isolados por schema; queries usam `SET search_path` por conexão
+- **Novo tenant:** adicionar ao `var.tenants` no Terraform → app cria schema + seed no startup
 - **2 roles:** `admin` (gerencia usuários do tenant), `user`
 - **Somente admin cria usuários** — não há registro público
-- **Filtro de dados:** `tenant_id` é o filtro primário em queries; `user_id` permanece para atribuição/auditoria
-- **Admin padrão:** `admin@admin.com` / `admin123`
-- **Tenant padrão:** domain=`financial`, name=`Financial`
+- **Admin padrão:** `admin@admin.com` / `admin123` (seed automático por schema)
+- **Tenant padrão:** domain=`root`, name=`Root`
+- **Env `TENANTS`:** lista de tenants separados por vírgula (ex: `root,financial`)
 
 ## Comandos úteis (rodar da raiz `finance/`)
 
@@ -32,14 +36,16 @@ finance/
 │   ├── cmd/api/      # Entrypoint
 │   ├── internal/
 │   │   ├── config/          # Variáveis de ambiente
+│   │   ├── tenant/          # Context helpers (ContextWithSchema, SchemaFromContext)
 │   │   ├── domain/
 │   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit)
 │   │   │   ├── repository/  # Interfaces dos repositórios
 │   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
 │   │   └── infrastructure/
-│   │       ├── database/    # Implementação PostgreSQL (pgx)
+│   │       ├── database/    # Implementação PostgreSQL (pgx), SchemaManager, TenantCache, AcquireWithSchema
 │   │       └── http/        # Handlers, middleware (auth, cors, role), router (Gin)
-│   └── migrations/          # SQL migrations (golang-migrate)
+│   ├── migrations/          # Public migrations (tabela tenants)
+│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits)
 ├── frontend/         # React SPA
 │   └── src/
 │       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, Profile, Users

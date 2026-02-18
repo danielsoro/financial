@@ -12,7 +12,7 @@ type CategoryRepository interface {
 	Update(ctx context.Context, cat *entity.Category) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Category, error)
-	FindAllForTenant(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error)
+	FindAll(ctx context.Context, catType string) ([]entity.Category, error)
 	IsInUse(ctx context.Context, id uuid.UUID) (bool, error)
 	IsSubtreeInUse(ctx context.Context, id uuid.UUID) (bool, error)
 }

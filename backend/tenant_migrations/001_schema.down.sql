@@ -2,4 +2,3 @@ DROP TABLE IF EXISTS expense_limits;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
-DROP EXTENSION IF EXISTS "pgcrypto";

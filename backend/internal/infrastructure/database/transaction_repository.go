@@ -22,11 +22,17 @@ func NewTransactionRepo(pool *pgxpool.Pool) *TransactionRepo {
 }
 
 func (r *TransactionRepo) Create(ctx context.Context, tx *entity.Transaction) error {
-	err := r.pool.QueryRow(ctx,
-		`INSERT INTO transactions (tenant_id, user_id, category_id, type, amount, description, date)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	err = conn.QueryRow(ctx,
+		`INSERT INTO transactions (user_id, category_id, type, amount, description, date)
+		 VALUES ($1, $2, $3, $4, $5, $6)
 		 RETURNING id, created_at, updated_at`,
-		tx.TenantID, tx.UserID, tx.CategoryID, tx.Type, tx.Amount, tx.Description, tx.Date,
+		tx.UserID, tx.CategoryID, tx.Type, tx.Amount, tx.Description, tx.Date,
 	).Scan(&tx.ID, &tx.CreatedAt, &tx.UpdatedAt)
 	if err != nil {
 		return err
@@ -35,7 +41,13 @@ func (r *TransactionRepo) Create(ctx context.Context, tx *entity.Transaction) er
 }
 
 func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) error {
-	err := r.pool.QueryRow(ctx,
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	err = conn.QueryRow(ctx,
 		`UPDATE transactions
 		 SET type = $1, amount = $2, description = $3, date = $4, category_id = $5, updated_at = NOW()
 		 WHERE id = $6
@@ -52,7 +64,13 @@ func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) er
 }
 
 func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.pool.Exec(ctx, `DELETE FROM transactions WHERE id = $1`, id)
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	result, err := conn.Exec(ctx, `DELETE FROM transactions WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -63,14 +81,20 @@ func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *TransactionRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Transaction, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	var tx entity.Transaction
-	err := r.pool.QueryRow(ctx,
-		`SELECT t.id, t.tenant_id, t.user_id, t.category_id, c.name AS category_name,
+	err = conn.QueryRow(ctx,
+		`SELECT t.id, t.user_id, t.category_id, c.name AS category_name,
 		        t.type, t.amount, t.description, t.date::text, t.created_at, t.updated_at
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
 		 WHERE t.id = $1`, id,
-	).Scan(&tx.ID, &tx.TenantID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
+	).Scan(&tx.ID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
 		&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.CreatedAt, &tx.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -82,6 +106,12 @@ func (r *TransactionRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.T
 }
 
 func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.TransactionFilter) (*entity.PaginatedTransactions, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	if filter.PerPage <= 0 {
 		filter.PerPage = 20
 	}
@@ -89,9 +119,9 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 		filter.Page = 1
 	}
 
-	baseWhere := ` WHERE t.tenant_id = $1`
-	args := []any{filter.TenantID}
-	argIdx := 2
+	baseWhere := ` WHERE 1=1`
+	args := []any{}
+	argIdx := 1
 
 	if filter.Type != "" {
 		baseWhere += fmt.Sprintf(` AND t.type = $%d`, argIdx)
@@ -119,7 +149,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM transactions t%s`, baseWhere)
 	var total int
-	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := conn.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +157,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 
 	offset := (filter.Page - 1) * filter.PerPage
 	dataQuery := fmt.Sprintf(
-		`SELECT t.id, t.tenant_id, t.user_id, t.category_id, c.name AS category_name,
+		`SELECT t.id, t.user_id, t.category_id, c.name AS category_name,
 		        t.type, t.amount, t.description, t.date::text, t.created_at, t.updated_at
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
@@ -138,7 +168,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	)
 	args = append(args, filter.PerPage, offset)
 
-	rows, err := r.pool.Query(ctx, dataQuery, args...)
+	rows, err := conn.Query(ctx, dataQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +177,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	var transactions []entity.Transaction
 	for rows.Next() {
 		var tx entity.Transaction
-		if err := rows.Scan(&tx.ID, &tx.TenantID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
+		if err := rows.Scan(&tx.ID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
 			&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.CreatedAt, &tx.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -171,17 +201,22 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	}, nil
 }
 
-func (r *TransactionRepo) GetSummary(ctx context.Context, tenantID uuid.UUID, month, year int) (*entity.DashboardSummary, error) {
-	rows, err := r.pool.Query(ctx,
+func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int) (*entity.DashboardSummary, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	rows, err := conn.Query(ctx,
 		`SELECT type,
 		        COALESCE(SUM(amount), 0) AS total,
 		        COUNT(*) AS count
 		 FROM transactions
-		 WHERE tenant_id = $1
-		   AND EXTRACT(MONTH FROM date::date) = $2
-		   AND EXTRACT(YEAR FROM date::date) = $3
+		 WHERE EXTRACT(MONTH FROM date::date) = $1
+		   AND EXTRACT(YEAR FROM date::date) = $2
 		 GROUP BY type`,
-		tenantID, month, year,
+		month, year,
 	)
 	if err != nil {
 		return nil, err
@@ -215,18 +250,23 @@ func (r *TransactionRepo) GetSummary(ctx context.Context, tenantID uuid.UUID, mo
 	return summary, nil
 }
 
-func (r *TransactionRepo) GetByCategory(ctx context.Context, tenantID uuid.UUID, month, year int, txType string) ([]entity.CategoryTotal, error) {
-	rows, err := r.pool.Query(ctx,
+func (r *TransactionRepo) GetByCategory(ctx context.Context, month, year int, txType string) ([]entity.CategoryTotal, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	rows, err := conn.Query(ctx,
 		`SELECT t.category_id, c.name AS category_name, SUM(t.amount) AS total
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
-		 WHERE t.tenant_id = $1
-		   AND EXTRACT(MONTH FROM t.date::date) = $2
-		   AND EXTRACT(YEAR FROM t.date::date) = $3
-		   AND t.type = $4
+		 WHERE EXTRACT(MONTH FROM t.date::date) = $1
+		   AND EXTRACT(YEAR FROM t.date::date) = $2
+		   AND t.type = $3
 		 GROUP BY t.category_id, c.name
 		 ORDER BY total DESC`,
-		tenantID, month, year, txType,
+		month, year, txType,
 	)
 	if err != nil {
 		return nil, err

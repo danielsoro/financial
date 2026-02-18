@@ -47,7 +47,6 @@ func (h *ExpenseLimitHandler) List(c *gin.Context) {
 }
 
 func (h *ExpenseLimitHandler) Create(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	userID := middleware.GetUserID(c)
 	var req expenseLimitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,11 +55,10 @@ func (h *ExpenseLimitHandler) Create(c *gin.Context) {
 	}
 
 	limit := &entity.ExpenseLimit{
-		TenantID: tenantID,
-		UserID:   userID,
-		Month:    req.Month,
-		Year:     req.Year,
-		Amount:   req.Amount,
+		UserID: userID,
+		Month:  req.Month,
+		Year:   req.Year,
+		Amount: req.Amount,
 	}
 
 	if req.CategoryID != nil && *req.CategoryID != "" {

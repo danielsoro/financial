@@ -21,11 +21,17 @@ func NewCategoryRepo(pool *pgxpool.Pool) *CategoryRepo {
 }
 
 func (r *CategoryRepo) Create(ctx context.Context, cat *entity.Category) error {
-	err := r.pool.QueryRow(ctx,
-		`INSERT INTO categories (tenant_id, user_id, parent_id, name, type, is_default)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	err = conn.QueryRow(ctx,
+		`INSERT INTO categories (user_id, parent_id, name, type, is_default)
+		 VALUES ($1, $2, $3, $4, $5)
 		 RETURNING id, created_at, updated_at`,
-		cat.TenantID, cat.UserID, cat.ParentID, cat.Name, cat.Type, cat.IsDefault,
+		cat.UserID, cat.ParentID, cat.Name, cat.Type, cat.IsDefault,
 	).Scan(&cat.ID, &cat.CreatedAt, &cat.UpdatedAt)
 	if err != nil {
 		if isDuplicateKey(err) {
@@ -37,7 +43,13 @@ func (r *CategoryRepo) Create(ctx context.Context, cat *entity.Category) error {
 }
 
 func (r *CategoryRepo) Update(ctx context.Context, cat *entity.Category) error {
-	err := r.pool.QueryRow(ctx,
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	err = conn.QueryRow(ctx,
 		`UPDATE categories SET name = $1, type = $2, parent_id = $3, updated_at = NOW()
 		 WHERE id = $4
 		 RETURNING updated_at`,
@@ -56,7 +68,13 @@ func (r *CategoryRepo) Update(ctx context.Context, cat *entity.Category) error {
 }
 
 func (r *CategoryRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.pool.Exec(ctx, `DELETE FROM categories WHERE id = $1`, id)
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer release()
+
+	result, err := conn.Exec(ctx, `DELETE FROM categories WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -67,11 +85,17 @@ func (r *CategoryRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *CategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Category, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	var cat entity.Category
-	err := r.pool.QueryRow(ctx,
-		`SELECT id, tenant_id, user_id, parent_id, name, type, is_default, created_at, updated_at
+	err = conn.QueryRow(ctx,
+		`SELECT id, user_id, parent_id, name, type, is_default, created_at, updated_at
 		 FROM categories WHERE id = $1`, id,
-	).Scan(&cat.ID, &cat.TenantID, &cat.UserID, &cat.ParentID, &cat.Name, &cat.Type, &cat.IsDefault, &cat.CreatedAt, &cat.UpdatedAt)
+	).Scan(&cat.ID, &cat.UserID, &cat.ParentID, &cat.Name, &cat.Type, &cat.IsDefault, &cat.CreatedAt, &cat.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -81,24 +105,30 @@ func (r *CategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Cate
 	return &cat, nil
 }
 
-func (r *CategoryRepo) FindAllForTenant(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
+func (r *CategoryRepo) FindAll(ctx context.Context, catType string) ([]entity.Category, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	query := `WITH RECURSIVE cat_tree AS (
-		SELECT id, tenant_id, user_id, parent_id, name, type, is_default, created_at, updated_at,
+		SELECT id, user_id, parent_id, name, type, is_default, created_at, updated_at,
 		       name::text AS full_path
 		FROM categories
-		WHERE parent_id IS NULL AND tenant_id = $1
+		WHERE parent_id IS NULL
 		UNION ALL
-		SELECT c.id, c.tenant_id, c.user_id, c.parent_id, c.name, c.type, c.is_default, c.created_at, c.updated_at,
+		SELECT c.id, c.user_id, c.parent_id, c.name, c.type, c.is_default, c.created_at, c.updated_at,
 		       ct.full_path || ' > ' || c.name
 		FROM categories c
 		INNER JOIN cat_tree ct ON c.parent_id = ct.id
 	)
-	SELECT id, tenant_id, user_id, parent_id, name, type, is_default, created_at, updated_at, full_path
+	SELECT id, user_id, parent_id, name, type, is_default, created_at, updated_at, full_path
 	FROM cat_tree
 	WHERE 1=1`
 
-	args := []any{tenantID}
-	argIdx := 2
+	args := []any{}
+	argIdx := 1
 
 	if catType != "" {
 		if catType == "income" {
@@ -115,7 +145,7 @@ func (r *CategoryRepo) FindAllForTenant(ctx context.Context, tenantID uuid.UUID,
 
 	query += ` ORDER BY full_path ASC`
 
-	rows, err := r.pool.Query(ctx, query, args...)
+	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +154,7 @@ func (r *CategoryRepo) FindAllForTenant(ctx context.Context, tenantID uuid.UUID,
 	var categories []entity.Category
 	for rows.Next() {
 		var cat entity.Category
-		if err := rows.Scan(&cat.ID, &cat.TenantID, &cat.UserID, &cat.ParentID, &cat.Name, &cat.Type, &cat.IsDefault, &cat.CreatedAt, &cat.UpdatedAt, &cat.FullPath); err != nil {
+		if err := rows.Scan(&cat.ID, &cat.UserID, &cat.ParentID, &cat.Name, &cat.Type, &cat.IsDefault, &cat.CreatedAt, &cat.UpdatedAt, &cat.FullPath); err != nil {
 			return nil, err
 		}
 		categories = append(categories, cat)
@@ -138,8 +168,14 @@ func (r *CategoryRepo) FindAllForTenant(ctx context.Context, tenantID uuid.UUID,
 }
 
 func (r *CategoryRepo) IsInUse(ctx context.Context, id uuid.UUID) (bool, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+
 	var exists bool
-	err := r.pool.QueryRow(ctx,
+	err = conn.QueryRow(ctx,
 		`SELECT EXISTS(SELECT 1 FROM transactions WHERE category_id = $1)`, id,
 	).Scan(&exists)
 	if err != nil {
@@ -149,8 +185,14 @@ func (r *CategoryRepo) IsInUse(ctx context.Context, id uuid.UUID) (bool, error) 
 }
 
 func (r *CategoryRepo) IsSubtreeInUse(ctx context.Context, id uuid.UUID) (bool, error) {
+	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+
 	var exists bool
-	err := r.pool.QueryRow(ctx,
+	err = conn.QueryRow(ctx,
 		`WITH RECURSIVE subtree AS (
 			SELECT id FROM categories WHERE id = $1
 			UNION ALL

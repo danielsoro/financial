@@ -20,49 +20,54 @@ Clean Architecture com 3 camadas:
 cmd/api/main.go          → Bootstrap e injeção de dependências
 internal/
 ├── config/              → Configuração (env vars)
+├── tenant/              → Context helpers (ContextWithSchema, SchemaFromContext)
 ├── domain/              → Regras de negócio (sem dependências externas)
 │   ├── entity/          → Entidades de domínio (User, Tenant, Category, Transaction, ExpenseLimit)
 │   ├── repository/      → Interfaces dos repositórios
 │   ├── usecase/         → Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
 │   └── errors.go        → Erros de domínio
 └── infrastructure/      → Implementações concretas
-    ├── database/        → Repositórios PostgreSQL
+    ├── database/        → Repositórios PostgreSQL, SchemaManager, TenantCache, AcquireWithSchema
     └── http/
         ├── handler/     → HTTP handlers (auth, admin, category, transaction, expense_limit, dashboard)
-        ├── middleware/   → Auth JWT, CORS, Role (RequireAdmin)
+        ├── middleware/   → Auth JWT (com schema injection), CORS, Role (RequireAdmin)
         └── router/      → Configuração de rotas
 ```
 
 **Fluxo de uma requisição:**
-HTTP Request → Router → Middleware (CORS → Auth → Role) → Handler → UseCase → Repository Interface → Database
+HTTP Request → Router → Middleware (CORS → Auth [JWT + TenantCache → schema context] → Role) → Handler → UseCase → Repository [AcquireWithSchema → SET search_path] → Database
 
 ## Multi-Tenancy
 
-- **Tenant** é identificado por subdomínio (enviado no login)
-- **2 roles:** `admin` (gerencia usuários do tenant), `user`
+- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
+- **Tenant** é identificado por subdomínio (enviado no login). `localhost` → tenant `root`
+- **Tabela `tenants`** no schema `public` como registro central
+- **Isolamento:** cada request autenticada resolve o tenant via JWT → TenantCache → `SET search_path`
 - **JWT claims:** `sub` (user_id), `tenant_id`, `role`
-- **Filtro de dados:** `tenant_id` é o filtro primário; `user_id` mantido para atribuição
-- **Admin padrão:** `admin@admin.com` / `admin123`
+- **Startup:** `RunMigrations` → `EnsureTenantsFromEnv` → `SchemaManager.InitAllTenants` → `TenantCache.Load`
+- **Novo tenant:** adicionar ao env `TENANTS` → app cria schema + migrations + seed admin no startup
+- **2 roles:** `admin` (gerencia usuários do tenant), `user`
+- **Admin padrão:** `admin@admin.com` / `admin123` (seed automático por schema)
 
 ## Entidades
 
 ### Tenant
-Organização/empresa. Campos: id, name, domain (unique), is_active, timestamps.
+Organização/empresa. Campos: id, name, domain (unique), schema_name (unique), is_active, timestamps. Armazenado no schema `public`.
 
 ### User
-Usuário do sistema com tenant_id, role (admin/user), autenticação por email/senha.
+Usuário do sistema com role (admin/user), autenticação por email/senha. Armazenado no schema do tenant.
 
 ### Transaction
-Transação financeira (receita ou despesa) com tenant_id, user_id, valor, descrição, data e categoria.
+Transação financeira (receita ou despesa) com user_id, valor, descrição, data e categoria. Armazenada no schema do tenant.
 
 ### Category
-Categoria de transação com tenant_id. Suporta hierarquia (subcategorias via `parent_id`). Tipos: `income`, `expense`, `both`.
+Categoria de transação. Suporta hierarquia (subcategorias via `parent_id`). Tipos: `income`, `expense`, `both`. Armazenada no schema do tenant.
 
 ### ExpenseLimit
-Teto de gasto mensal por tenant — pode ser global (sem `category_id`) ou por categoria.
+Teto de gasto mensal — pode ser global (sem `category_id`) ou por categoria. Armazenado no schema do tenant.
 
 ### DashboardSummary / CategoryTotal
-Agregações para o dashboard: totais de receita/despesa/saldo e totais por categoria (filtrados por tenant).
+Agregações para o dashboard: totais de receita/despesa/saldo e totais por categoria.
 
 ## Endpoints da API
 
@@ -137,6 +142,7 @@ Variáveis de ambiente (arquivo `.env` na raiz do backend):
 | `DATABASE_URL` | Sim | String de conexão PostgreSQL |
 | `JWT_SECRET` | Sim | Chave para assinar tokens JWT |
 | `PORT` | Não | Porta do servidor (padrão: `8080`) |
+| `TENANTS` | Sim | Lista de tenants separados por vírgula (ex: `root,financial`). O app cria schemas no startup |
 | `ALLOWED_ORIGIN` | Não | Domínio para CORS (ex: `dnafami.com.br`). Aceita o domínio e subdomínios (`*.dnafami.com.br`). Se vazio ou `*`, aceita qualquer origin. `localhost` sempre é permitido |
 
 ## Como rodar
@@ -151,13 +157,20 @@ make run         # Roda sem hot-reload
 
 ## Migrations
 
+### Public (`migrations/`)
+
 | Migration | Descrição |
 |-----------|-----------|
-| `001_schema` | Cria tabelas: users, categories, transactions, expense_limits |
-| `002_seed` | Insere categorias padrão (Alimentação, Transporte, Salário, etc.) |
-| `003_category_hierarchy` | Adiciona `parent_id` às categorias para suporte a subcategorias |
-| `004_multi_tenant` | Cria tabela tenants, adiciona tenant_id e role às tabelas, seed admin |
-| `005_remove_super_admin` | Remove role super_admin, torna tenant_id NOT NULL em users |
+| `001_tenants` | Cria tabela `tenants` no schema `public` (registro central de tenants) |
+
+### Per-tenant (`tenant_migrations/`)
+
+Executadas automaticamente pelo `SchemaManager` para cada tenant ativo no startup.
+
+| Migration | Descrição |
+|-----------|-----------|
+| `001_schema` | Cria tabelas: users, categories (com hierarquia), transactions, expense_limits |
+| `002_seed` | Insere categorias padrão (Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Salário, Freelance, Investimentos, Outros) |
 
 ## Erros de domínio
 

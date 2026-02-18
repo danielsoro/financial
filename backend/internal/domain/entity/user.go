@@ -8,7 +8,6 @@ import (
 
 type User struct {
 	ID           uuid.UUID `json:"id"`
-	TenantID     uuid.UUID `json:"tenant_id"`
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	Role         string    `json:"role"`
@@ -19,7 +18,6 @@ type User struct {
 
 type AdminUser struct {
 	ID        uuid.UUID `json:"id"`
-	TenantID  uuid.UUID `json:"tenant_id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	Role      string    `json:"role"`

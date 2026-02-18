@@ -12,6 +12,7 @@ type Config struct {
 	Port          string
 	StaticDir     string
 	AllowedOrigin string
+	Tenants       string
 }
 
 func Load() *Config {
@@ -23,6 +24,7 @@ func Load() *Config {
 		Port:          os.Getenv("PORT"),
 		StaticDir:     os.Getenv("STATIC_DIR"),
 		AllowedOrigin: os.Getenv("ALLOWED_ORIGIN"),
+		Tenants:       os.Getenv("TENANTS"),
 	}
 
 	if cfg.Port == "" {

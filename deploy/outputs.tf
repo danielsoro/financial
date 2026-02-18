@@ -27,6 +27,11 @@ output "domain" {
   description = "Root domain"
 }
 
+output "root_url" {
+  value       = "https://${var.domain}"
+  description = "Root tenant URL"
+}
+
 output "tenant_urls" {
   value       = { for name, record in cloudflare_record.tenant : name => "https://${record.hostname}" }
   description = "Tenant subdomain URLs"

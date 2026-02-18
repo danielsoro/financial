@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 
-	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/dcunha/finance/backend/internal/domain/repository"
 	"github.com/google/uuid"
@@ -22,14 +21,7 @@ func (uc *TransactionUsecase) List(ctx context.Context, filter entity.Transactio
 }
 
 func (uc *TransactionUsecase) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*entity.Transaction, error) {
-	tx, err := uc.transactionRepo.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if tx.TenantID != tenantID {
-		return nil, domain.ErrForbidden
-	}
-	return tx, nil
+	return uc.transactionRepo.FindByID(ctx, id)
 }
 
 func (uc *TransactionUsecase) Create(ctx context.Context, tx *entity.Transaction) error {
@@ -37,23 +29,15 @@ func (uc *TransactionUsecase) Create(ctx context.Context, tx *entity.Transaction
 }
 
 func (uc *TransactionUsecase) Update(ctx context.Context, tenantID uuid.UUID, tx *entity.Transaction) error {
-	existing, err := uc.transactionRepo.FindByID(ctx, tx.ID)
-	if err != nil {
+	if _, err := uc.transactionRepo.FindByID(ctx, tx.ID); err != nil {
 		return err
-	}
-	if existing.TenantID != tenantID {
-		return domain.ErrForbidden
 	}
 	return uc.transactionRepo.Update(ctx, tx)
 }
 
 func (uc *TransactionUsecase) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
-	tx, err := uc.transactionRepo.FindByID(ctx, id)
-	if err != nil {
+	if _, err := uc.transactionRepo.FindByID(ctx, id); err != nil {
 		return err
-	}
-	if tx.TenantID != tenantID {
-		return domain.ErrForbidden
 	}
 	return uc.transactionRepo.Delete(ctx, id)
 }
