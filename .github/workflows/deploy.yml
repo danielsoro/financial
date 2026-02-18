@@ -66,4 +66,7 @@ jobs:
             -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
             -var="jwt_secret=${{ secrets.TF_JWT_SECRET }}" \
             -var="github_repo=${{ github.repository }}" \
-            -var="image_tag=${{ steps.version.outputs.tag }}"
+            -var="image_tag=${{ steps.version.outputs.tag }}" \
+            -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -var="domain=${{ secrets.DOMAIN }}" \
+            -var='tenants=${{ secrets.TENANTS }}'

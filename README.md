@@ -8,7 +8,7 @@ App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e de
 
 **Frontend:** React 19 | TypeScript 5.9 | Vite 7 | Tailwind CSS v4 | TanStack Query v5
 
-**Infra:** PostgreSQL 16 | Docker | Google Cloud Run | Cloud SQL | Terraform
+**Infra:** PostgreSQL 16 | Docker | Google Cloud Run | Cloud SQL | Cloudflare DNS | Terraform
 
 ## Pre-requisitos
 
@@ -60,7 +60,7 @@ finance/
 │       ├── services/        # Clientes da API
 │       ├── contexts/        # AuthContext
 │       └── types/           # Interfaces TypeScript
-├── deploy/                  # Terraform (Cloud Run, Cloud SQL, IAM, Secrets)
+├── deploy/                  # Terraform (Cloud Run, Cloud SQL, IAM, Secrets, Cloudflare DNS)
 ├── .github/workflows/       # CI/CD (lint, build, deploy, infra)
 ├── Dockerfile               # Multi-stage: frontend + backend
 ├── docker-compose.yml       # Postgres, pgAdmin (dev local)
@@ -108,6 +108,26 @@ A infraestrutura e gerenciada via Terraform (`deploy/`):
 - **Artifact Registry** — imagens Docker
 - **Secret Manager** — JWT secret
 - **Workload Identity Federation** — autenticacao segura do GitHub Actions (sem chaves)
+- **Cloudflare DNS** — registros DNS por tenant (CNAME → Cloud Run, com proxy/CDN)
+
+### DNS (Cloudflare)
+
+Cada tenant tem um subdominio explicito gerenciado via Terraform (`cloudflare.tf`). Para adicionar um novo tenant, inclua o nome na variavel `tenants` e rode o pipeline:
+
+```hcl
+# deploy/terraform.tfvars
+tenants = ["financial", "novo-tenant"]
+```
+
+Variaveis necessarias (GitHub Secrets):
+
+| Secret | Descricao |
+|--------|-----------|
+| `CLOUDFLARE_API_TOKEN` | Token da API com permissoes Zone:Read, DNS:Edit, Zone Settings:Edit |
+| `DOMAIN` | Dominio raiz (ex: `dnafami.com.br`) |
+| `TENANTS` | Lista de subdominos em formato HCL (ex: `["financial"]`) |
+
+### Deploy
 
 Para fazer deploy:
 
