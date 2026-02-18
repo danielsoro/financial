@@ -76,6 +76,7 @@ finance/
 - **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, role
 - **Arquitetura:** Clean Architecture — entity → repository interface → usecase → handler
 - **Erros de domínio** definidos em `internal/domain/errors.go` e mapeados para HTTP status nos handlers
+- **CORS:** controlado por `ALLOWED_ORIGIN` — aceita o domínio e todos os subdomínios (tenants). Se vazio ou `*`, aceita qualquer origin
 
 ### Frontend
 

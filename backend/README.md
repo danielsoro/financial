@@ -137,6 +137,7 @@ Variáveis de ambiente (arquivo `.env` na raiz do backend):
 | `DATABASE_URL` | Sim | String de conexão PostgreSQL |
 | `JWT_SECRET` | Sim | Chave para assinar tokens JWT |
 | `PORT` | Não | Porta do servidor (padrão: `8080`) |
+| `ALLOWED_ORIGIN` | Não | Domínio para CORS (ex: `dnafami.com.br`). Aceita o domínio e subdomínios (`*.dnafami.com.br`). Se vazio ou `*`, aceita qualquer origin. `localhost` sempre é permitido |
 
 ## Como rodar
 

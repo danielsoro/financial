@@ -19,8 +19,8 @@ type Handlers struct {
 	Admin        *handler.AdminHandler
 }
 
-func Setup(r *gin.Engine, jwtSecret string, staticDir string, h Handlers) {
-	r.Use(middleware.CORS())
+func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, h Handlers) {
+	r.Use(middleware.CORS(allowedOrigin))
 
 	r.GET("/health", h.Health.Health)
 

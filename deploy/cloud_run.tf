@@ -65,6 +65,11 @@ resource "google_cloud_run_v2_service" "finance" {
         value = "./static"
       }
 
+      env {
+        name  = "ALLOWED_ORIGIN"
+        value = var.domain
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
