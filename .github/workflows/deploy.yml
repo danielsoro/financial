@@ -7,8 +7,8 @@ on:
 
 env:
   REGION: southamerica-east1
-  SERVICE: finance
   IMAGE: southamerica-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/finance/finance
+  TF_DIR: deploy
 
 jobs:
   deploy:
@@ -49,9 +49,19 @@ jobs:
           docker push ${{ env.IMAGE }}:${{ steps.version.outputs.tag }}
           docker push ${{ env.IMAGE }}:latest
 
-      - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}
-          region: ${{ env.REGION }}
-          image: ${{ env.IMAGE }}:${{ steps.version.outputs.tag }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform apply -auto-approve -input=false \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="db_password=${{ secrets.TF_DB_PASSWORD }}" \
+            -var="jwt_secret=${{ secrets.TF_JWT_SECRET }}" \
+            -var="github_repo=${{ github.repository }}" \
+            -var="image_tag=${{ steps.version.outputs.tag }}"
