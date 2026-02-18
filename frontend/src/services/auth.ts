@@ -19,9 +19,9 @@ function getSubdomain(): string {
     return 'root';
   }
 
-  // Prod: sub.domain.com (3+ parts) → extract first part
+  // Prod: sub.domain.com.br (4+ parts) → extract first part
   const parts = hostname.split('.');
-  if (parts.length >= 3) {
+  if (parts.length >= 4) {
     return parts[0];
   }
 
