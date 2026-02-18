@@ -21,3 +21,14 @@ output "github_actions_service_account" {
   value       = google_service_account.github_actions.email
   description = "GitHub Actions service account email (use as GCP_SERVICE_ACCOUNT GitHub secret)"
 }
+
+output "domain" {
+  value       = var.domain
+  description = "Root domain"
+}
+
+output "tenant_urls" {
+  value       = { for name, record in cloudflare_record.tenant : name => "https://${record.hostname}" }
+  description = "Tenant subdomain URLs"
+}
+

@@ -3,3 +3,8 @@ region      = "southamerica-east1"
 db_password = "change-me"
 jwt_secret  = "change-me"
 github_repo = "danielsoro/financial"
+
+# Cloudflare
+cloudflare_api_token = "change-me"
+domain               = "example.com"
+tenants              = ["financial"]

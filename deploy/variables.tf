@@ -31,3 +31,20 @@ variable "image_tag" {
   default     = "latest"
   description = "Docker image tag to deploy to Cloud Run"
 }
+
+variable "cloudflare_api_token" {
+  type        = string
+  sensitive   = true
+  description = "Cloudflare API token"
+}
+
+variable "domain" {
+  type        = string
+  description = "Root domain (e.g., financeiro.app)"
+}
+
+variable "tenants" {
+  type        = list(string)
+  default     = ["financial"]
+  description = "Tenant subdomains to create DNS records for"
+}
