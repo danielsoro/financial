@@ -46,11 +46,9 @@ func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain str
 		return "", nil, domain.ErrForbidden
 	}
 
-	// Non-super_admin must belong to the resolved tenant
-	if user.Role != "super_admin" {
-		if user.TenantID == nil || *user.TenantID != tenant.ID {
-			return "", nil, domain.ErrInvalidCredentials
-		}
+	// User must belong to the resolved tenant
+	if user.TenantID != tenant.ID {
+		return "", nil, domain.ErrInvalidCredentials
 	}
 
 	// JWT always gets the resolved tenant ID (from subdomain)

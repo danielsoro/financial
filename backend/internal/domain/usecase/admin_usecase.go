@@ -31,7 +31,7 @@ func (uc *AdminUsecase) CreateUser(ctx context.Context, tenantID uuid.UUID, name
 		return nil, err
 	}
 	user := &entity.User{
-		TenantID:     &tenantID,
+		TenantID:     tenantID,
 		Name:         name,
 		Email:        email,
 		Role:         role,
@@ -56,9 +56,6 @@ func (uc *AdminUsecase) UpdateUser(ctx context.Context, id uuid.UUID, name, emai
 	if err != nil {
 		return nil, err
 	}
-	if user.Role == "super_admin" {
-		return nil, domain.ErrForbidden
-	}
 	if role != "admin" && role != "user" {
 		return nil, domain.ErrInvalidRole
 	}
@@ -80,12 +77,8 @@ func (uc *AdminUsecase) UpdateUser(ctx context.Context, id uuid.UUID, name, emai
 }
 
 func (uc *AdminUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	user, err := uc.userRepo.FindByID(ctx, id)
-	if err != nil {
+	if _, err := uc.userRepo.FindByID(ctx, id); err != nil {
 		return err
-	}
-	if user.Role == "super_admin" {
-		return domain.ErrForbidden
 	}
 	return uc.userRepo.DeleteUser(ctx, id)
 }
@@ -94,9 +87,6 @@ func (uc *AdminUsecase) ResetPassword(ctx context.Context, id uuid.UUID, newPass
 	user, err := uc.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
-	}
-	if user.Role == "super_admin" {
-		return domain.ErrForbidden
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {

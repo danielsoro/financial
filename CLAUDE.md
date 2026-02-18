@@ -7,11 +7,11 @@ App de finanças **multi-tenant** com **Go backend** + **React frontend** + **Po
 ## Multi-Tenancy
 
 - **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`)
-- **3 roles:** `super_admin`, `admin` (gerencia usuários do tenant), `user`
+- **2 roles:** `admin` (gerencia usuários do tenant), `user`
 - **Somente admin cria usuários** — não há registro público
 - **Filtro de dados:** `tenant_id` é o filtro primário em queries; `user_id` permanece para atribuição/auditoria
-- **Super admin default:** `super@admin.com` / `admin123`
-- **Tenant padrão:** domain=`financial`, name=`Financial Demo`
+- **Admin padrão:** `admin@admin.com` / `admin123`
+- **Tenant padrão:** domain=`financial`, name=`Financial`
 
 ## Comandos úteis (rodar da raiz `finance/`)
 
@@ -63,7 +63,7 @@ finance/
 - Expense Limits: `GET/POST /expense-limits`, `PUT/DELETE /expense-limits/:id`
 - Dashboard: `GET /dashboard/summary`, `/dashboard/by-category`, `/dashboard/limits-progress`
 
-### Admin (role: admin ou super_admin)
+### Admin (role: admin)
 - `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password`
 
 ## Convenções de código

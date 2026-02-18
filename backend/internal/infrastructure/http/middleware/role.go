@@ -9,7 +9,7 @@ import (
 func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role := GetRole(c)
-		if role != "admin" && role != "super_admin" {
+		if role != "admin" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 			return
 		}

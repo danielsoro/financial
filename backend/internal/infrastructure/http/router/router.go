@@ -68,7 +68,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, h Handlers) {
 	dash.GET("/by-category", h.Dashboard.ByCategory)
 	dash.GET("/limits-progress", h.Dashboard.LimitsProgress)
 
-	// Admin routes (admin + super_admin)
+	// Admin routes
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RequireAdmin())
 	admin.GET("/users", h.Admin.ListUsers)

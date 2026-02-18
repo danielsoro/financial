@@ -25,7 +25,6 @@ function getSubdomain(): string {
     return parts[0];
   }
 
-  // Bare domain → empty (super_admin login)
   return '';
 }
 

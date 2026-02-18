@@ -9,13 +9,11 @@ import { HiPlus, HiPencil, HiTrash, HiKey } from 'react-icons/hi2';
 import type { AdminUser } from '../types';
 
 const roleBadgeColors: Record<string, string> = {
-  super_admin: 'bg-purple-100 text-purple-800',
   admin: 'bg-blue-100 text-blue-800',
   user: 'bg-gray-100 text-gray-600',
 };
 
 const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
   admin: 'Admin',
   user: 'Usuário',
 };
@@ -155,32 +153,30 @@ export default function Users() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {user.role !== 'super_admin' && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setResetUser(user);
-                            setNewPassword('');
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                          title="Redefinir senha"
-                        >
-                          <HiKey className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openEdit(user)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <HiPencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(user)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <HiTrash className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setResetUser(user);
+                          setNewPassword('');
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                        title="Redefinir senha"
+                      >
+                        <HiKey className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openEdit(user)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <HiPencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleting(user)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <HiTrash className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

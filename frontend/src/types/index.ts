@@ -1,9 +1,9 @@
 export interface User {
   id: string;
-  tenant_id: string | null;
+  tenant_id: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'admin' | 'user';
+  role: 'admin' | 'user';
   created_at: string;
   updated_at: string;
 }
@@ -24,10 +24,10 @@ export interface Tenant {
 
 export interface AdminUser {
   id: string;
-  tenant_id: string | null;
+  tenant_id: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'admin' | 'user';
+  role: 'admin' | 'user';
   created_at: string;
   updated_at: string;
 }

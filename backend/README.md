@@ -39,10 +39,10 @@ HTTP Request → Router → Middleware (CORS → Auth → Role) → Handler → 
 ## Multi-Tenancy
 
 - **Tenant** é identificado por subdomínio (enviado no login)
-- **3 roles:** `super_admin`, `admin` (gerencia usuários do tenant), `user`
+- **2 roles:** `admin` (gerencia usuários do tenant), `user`
 - **JWT claims:** `sub` (user_id), `tenant_id`, `role`
 - **Filtro de dados:** `tenant_id` é o filtro primário; `user_id` mantido para atribuição
-- **Super admin padrão:** `super@admin.com` / `admin123`
+- **Admin padrão:** `admin@admin.com` / `admin123`
 
 ## Entidades
 
@@ -50,7 +50,7 @@ HTTP Request → Router → Middleware (CORS → Auth → Role) → Handler → 
 Organização/empresa. Campos: id, name, domain (unique), is_active, timestamps.
 
 ### User
-Usuário do sistema com tenant_id, role (super_admin/admin/user), autenticação por email/senha.
+Usuário do sistema com tenant_id, role (admin/user), autenticação por email/senha.
 
 ### Transaction
 Transação financeira (receita ou despesa) com tenant_id, user_id, valor, descrição, data e categoria.
@@ -118,7 +118,7 @@ Base: `/api/v1`
 | GET | `/dashboard/by-category` | Totais por categoria |
 | GET | `/dashboard/limits-progress` | Progresso dos tetos |
 
-### Admin (role: admin ou super_admin)
+### Admin (role: admin)
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
@@ -155,7 +155,8 @@ make run         # Roda sem hot-reload
 | `001_schema` | Cria tabelas: users, categories, transactions, expense_limits |
 | `002_seed` | Insere categorias padrão (Alimentação, Transporte, Salário, etc.) |
 | `003_category_hierarchy` | Adiciona `parent_id` às categorias para suporte a subcategorias |
-| `004_multi_tenant` | Cria tabela tenants, adiciona tenant_id e role às tabelas, seed super_admin |
+| `004_multi_tenant` | Cria tabela tenants, adiciona tenant_id e role às tabelas, seed admin |
+| `005_remove_super_admin` | Remove role super_admin, torna tenant_id NOT NULL em users |
 
 ## Erros de domínio
 
