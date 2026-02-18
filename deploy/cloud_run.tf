@@ -70,6 +70,11 @@ resource "google_cloud_run_v2_service" "finance" {
         value = var.domain
       }
 
+      env {
+        name  = "TENANTS"
+        value = join(",", concat(["root"], var.tenants))
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"

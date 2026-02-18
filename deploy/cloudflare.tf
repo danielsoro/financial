@@ -32,7 +32,7 @@ resource "cloudflare_record" "tenant" {
   ttl     = 1
 }
 
-resource "cloudflare_worker_script" "origin_rewrite" {
+resource "cloudflare_workers_script" "origin_rewrite" {
   account_id = var.cloudflare_account_id
   name       = "finance-origin-rewrite"
   content    = <<-JS
@@ -47,14 +47,14 @@ resource "cloudflare_worker_script" "origin_rewrite" {
   module = true
 }
 
-resource "cloudflare_worker_route" "root" {
+resource "cloudflare_workers_route" "root" {
   zone_id     = local.zone_id
   pattern     = "${var.domain}/*"
-  script_name = cloudflare_worker_script.origin_rewrite.name
+  script_name = cloudflare_workers_script.origin_rewrite.name
 }
 
-resource "cloudflare_worker_route" "subdomains" {
+resource "cloudflare_workers_route" "subdomains" {
   zone_id     = local.zone_id
   pattern     = "*.${var.domain}/*"
-  script_name = cloudflare_worker_script.origin_rewrite.name
+  script_name = cloudflare_workers_script.origin_rewrite.name
 }

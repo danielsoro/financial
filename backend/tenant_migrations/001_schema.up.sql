@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -14,13 +15,21 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES categories(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense', 'both')),
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, name)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_unique_root
+    ON categories (name) WHERE parent_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_unique_child
+    ON categories (parent_id, name) WHERE parent_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);
 
 -- Transactions
 CREATE TABLE IF NOT EXISTS transactions (
@@ -36,7 +45,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_transactions_user_type ON transactions(user_id, type);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
 
 -- Expense Limits
 CREATE TABLE IF NOT EXISTS expense_limits (
@@ -47,11 +56,12 @@ CREATE TABLE IF NOT EXISTS expense_limits (
     year INT NOT NULL CHECK (year > 0),
     amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, category_id, month, year)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Partial unique index for global limits (category_id IS NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_expense_limits_cat
+    ON expense_limits(category_id, month, year);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_expense_limits_global
-    ON expense_limits(user_id, month, year)
+    ON expense_limits(month, year)
     WHERE category_id IS NULL;

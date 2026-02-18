@@ -13,6 +13,5 @@ FROM (VALUES
     ('Outros', 'both')
 ) AS v(name, type)
 WHERE NOT EXISTS (
-    SELECT 1 FROM categories c
-    WHERE c.name = v.name AND c.user_id IS NULL
+    SELECT 1 FROM categories LIMIT 1
 );

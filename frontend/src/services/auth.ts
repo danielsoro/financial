@@ -4,9 +4,9 @@ import type { AuthResponse, User } from '../types';
 function getSubdomain(): string {
   const hostname = window.location.hostname;
 
-  // Dev: financial.localhost → financial; localhost → financial (fallback)
+  // Dev: localhost → root tenant
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'financial';
+    return 'root';
   }
 
   // Dev: *.localhost → extract subdomain
@@ -14,18 +14,19 @@ function getSubdomain(): string {
     return hostname.replace('.localhost', '');
   }
 
-  // Cloud Run: xxx.run.app → fallback
+  // Cloud Run: xxx.run.app → root tenant
   if (hostname.endsWith('.run.app')) {
-    return 'financial';
+    return 'root';
   }
 
-  // Prod: sub.domain.com → extract first part
+  // Prod: sub.domain.com (3+ parts) → extract first part
   const parts = hostname.split('.');
   if (parts.length >= 3) {
     return parts[0];
   }
 
-  return '';
+  // Prod: domain.com (2 parts) → root tenant
+  return 'root';
 }
 
 export const authService = {

@@ -18,11 +18,11 @@ func NewCategoryUsecase(repo repository.CategoryRepository) *CategoryUsecase {
 }
 
 func (uc *CategoryUsecase) List(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
-	return uc.categoryRepo.FindAllForTenant(ctx, tenantID, catType)
+	return uc.categoryRepo.FindAll(ctx, catType)
 }
 
 func (uc *CategoryUsecase) ListTree(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
-	cats, err := uc.categoryRepo.FindAllForTenant(ctx, tenantID, catType)
+	cats, err := uc.categoryRepo.FindAll(ctx, catType)
 	if err != nil {
 		return nil, err
 	}
@@ -35,14 +35,10 @@ func (uc *CategoryUsecase) Create(ctx context.Context, tenantID, userID uuid.UUI
 		if err != nil {
 			return nil, err
 		}
-		if parent.TenantID != tenantID {
-			return nil, domain.ErrForbidden
-		}
 		catType = parent.Type
 	}
 
 	cat := &entity.Category{
-		TenantID:  tenantID,
 		UserID:    &userID,
 		ParentID:  parentID,
 		Name:      name,
@@ -60,7 +56,7 @@ func (uc *CategoryUsecase) Update(ctx context.Context, tenantID uuid.UUID, id uu
 	if err != nil {
 		return nil, err
 	}
-	if cat.IsDefault || cat.TenantID != tenantID {
+	if cat.IsDefault {
 		return nil, domain.ErrForbidden
 	}
 
@@ -68,12 +64,8 @@ func (uc *CategoryUsecase) Update(ctx context.Context, tenantID uuid.UUID, id uu
 		if *parentID == id {
 			return nil, domain.ErrCyclicCategory
 		}
-		parent, err := uc.categoryRepo.FindByID(ctx, *parentID)
-		if err != nil {
+		if _, err := uc.categoryRepo.FindByID(ctx, *parentID); err != nil {
 			return nil, err
-		}
-		if parent.TenantID != tenantID {
-			return nil, domain.ErrForbidden
 		}
 		if err := uc.checkCycle(ctx, *parentID, id); err != nil {
 			return nil, err
@@ -111,7 +103,7 @@ func (uc *CategoryUsecase) Delete(ctx context.Context, tenantID uuid.UUID, id uu
 	if err != nil {
 		return err
 	}
-	if cat.IsDefault || cat.TenantID != tenantID {
+	if cat.IsDefault {
 		return domain.ErrForbidden
 	}
 	inUse, err := uc.categoryRepo.IsSubtreeInUse(ctx, id)

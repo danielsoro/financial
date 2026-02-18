@@ -22,9 +22,26 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Run migrations
+	// Run public migrations (creates tenants table)
 	if err := database.RunMigrations(cfg.DatabaseURL, "migrations"); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Ensure tenants from TENANTS env var exist in the tenants table
+	if err := database.EnsureTenantsFromEnv(ctx, pool, cfg.Tenants); err != nil {
+		log.Fatalf("Failed to ensure tenants: %v", err)
+	}
+
+	// Initialize all tenant schemas (create schemas, run tenant migrations, seed admin)
+	sm := database.NewSchemaManager(pool)
+	if err := sm.InitAllTenants(ctx, cfg.DatabaseURL, "tenant_migrations"); err != nil {
+		log.Fatalf("Failed to initialize tenant schemas: %v", err)
+	}
+
+	// Load tenant cache (after all tenants are created)
+	tenantCache := database.NewTenantCache()
+	if err := tenantCache.Load(ctx, pool); err != nil {
+		log.Fatalf("Failed to load tenant cache: %v", err)
 	}
 
 	// Repositories
@@ -56,7 +73,7 @@ func main() {
 
 	// Router
 	r := gin.Default()
-	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, cfg.AllowedOrigin, handlers)
+	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, cfg.AllowedOrigin, tenantCache, handlers)
 
 	log.Printf("Server starting on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

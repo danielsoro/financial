@@ -23,6 +23,7 @@ services:
       DATABASE_URL: postgres://finance:finance123@postgres:5432/finance?sslmode=disable
       JWT_SECRET: super-secret-key-change-in-production
       PORT: "8080"
+      TENANTS: root,test
     ports:
       - "8080:8080"
     depends_on:

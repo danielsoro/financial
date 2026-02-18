@@ -15,6 +15,7 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /api .
 COPY migrations/ ./migrations/
+COPY tenant_migrations/ ./tenant_migrations/
 
 EXPOSE 8080
 

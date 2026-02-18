@@ -24,13 +24,13 @@ func NewDashboardUsecase(
 }
 
 func (uc *DashboardUsecase) GetSummary(ctx context.Context, tenantID uuid.UUID, month, year int) (*entity.DashboardSummary, error) {
-	return uc.transactionRepo.GetSummary(ctx, tenantID, month, year)
+	return uc.transactionRepo.GetSummary(ctx, month, year)
 }
 
 func (uc *DashboardUsecase) GetByCategory(ctx context.Context, tenantID uuid.UUID, month, year int, txType string) ([]entity.CategoryTotal, error) {
-	return uc.transactionRepo.GetByCategory(ctx, tenantID, month, year, txType)
+	return uc.transactionRepo.GetByCategory(ctx, month, year, txType)
 }
 
 func (uc *DashboardUsecase) GetLimitsProgress(ctx context.Context, tenantID uuid.UUID, month, year int) ([]entity.LimitProgress, error) {
-	return uc.expenseLimitRepo.GetLimitsProgress(ctx, tenantID, month, year)
+	return uc.expenseLimitRepo.GetLimitsProgress(ctx, month, year)
 }

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dcunha/finance/backend/internal/infrastructure/database"
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/handler"
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ type Handlers struct {
 	Admin        *handler.AdminHandler
 }
 
-func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, h Handlers) {
+func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, tenantCache *database.TenantCache, h Handlers) {
 	r.Use(middleware.CORS(allowedOrigin))
 
 	r.GET("/health", h.Health.Health)
@@ -32,7 +33,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 
 	// Protected routes
 	protected := api.Group("")
-	protected.Use(middleware.Auth(jwtSecret))
+	protected.Use(middleware.Auth(jwtSecret, tenantCache))
 
 	// Profile
 	protected.GET("/profile", h.Auth.GetProfile)

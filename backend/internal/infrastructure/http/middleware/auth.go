@@ -4,12 +4,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dcunha/finance/backend/internal/infrastructure/database"
+	"github.com/dcunha/finance/backend/internal/tenant"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-func Auth(jwtSecret string) gin.HandlerFunc {
+func Auth(jwtSecret string, tenantCache *database.TenantCache) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if header == "" {
@@ -55,6 +57,16 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 		}
 
 		role, _ := claims["role"].(string)
+
+		// Look up tenant in cache and inject schema into request context
+		t, ok := tenantCache.GetByID(tenantID)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "tenant not found"})
+			return
+		}
+
+		ctx := tenant.ContextWithSchema(c.Request.Context(), t.SchemaName)
+		c.Request = c.Request.WithContext(ctx)
 
 		c.Set("userID", userID)
 		c.Set("tenantID", tenantID)
