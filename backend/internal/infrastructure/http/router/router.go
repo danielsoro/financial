@@ -10,20 +10,19 @@ import (
 )
 
 type Handlers struct {
+	Health       *handler.HealthHandler
 	Auth         *handler.AuthHandler
 	Category     *handler.CategoryHandler
 	Transaction  *handler.TransactionHandler
 	ExpenseLimit *handler.ExpenseLimitHandler
 	Dashboard    *handler.DashboardHandler
-	Admin *handler.AdminHandler
+	Admin        *handler.AdminHandler
 }
 
 func Setup(r *gin.Engine, jwtSecret string, staticDir string, h Handlers) {
 	r.Use(middleware.CORS())
 
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	r.GET("/health", h.Health.Health)
 
 	api := r.Group("/api/v1")
 
