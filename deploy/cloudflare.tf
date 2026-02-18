@@ -1,5 +1,5 @@
 locals {
-  cloud_run_hostname = replace(google_cloud_run_v2_service.finance.uri, "https://", "")
+  cloud_run_hostname = try(replace(google_cloud_run_v2_service.finance.uri, "https://", ""), "placeholder.run.app")
 }
 
 data "cloudflare_zones" "domain" {
