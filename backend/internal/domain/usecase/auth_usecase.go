@@ -7,7 +7,6 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/dcunha/finance/backend/internal/domain/repository"
-	"github.com/dcunha/finance/backend/internal/tenant"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -23,22 +22,24 @@ func NewAuthUsecase(userRepo repository.UserRepository, tenantRepo repository.Te
 	return &AuthUsecase{userRepo: userRepo, tenantRepo: tenantRepo, jwtSecret: jwtSecret}
 }
 
-func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain string) (string, *entity.User, error) {
-	// Resolve tenant from subdomain
+// ResolveTenant looks up the tenant by subdomain (public schema, no schema-scoped connection needed).
+func (uc *AuthUsecase) ResolveTenant(ctx context.Context, subdomain string) (*entity.Tenant, error) {
 	if subdomain == "" {
 		subdomain = "root"
 	}
 	t, err := uc.tenantRepo.FindByDomain(ctx, subdomain)
 	if err != nil {
-		return "", nil, domain.ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 	if !t.IsActive {
-		return "", nil, domain.ErrForbidden
+		return nil, domain.ErrForbidden
 	}
+	return t, nil
+}
 
-	// Set schema context so queries run in the tenant's schema
-	ctx = tenant.ContextWithSchema(ctx, t.SchemaName)
-
+// Authenticate validates credentials and returns a JWT token.
+// Expects a schema-scoped connection to be already in the context.
+func (uc *AuthUsecase) Authenticate(ctx context.Context, email, password string, tenantID uuid.UUID) (string, *entity.User, error) {
 	user, err := uc.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if err == domain.ErrNotFound {
@@ -50,8 +51,7 @@ func (uc *AuthUsecase) Login(ctx context.Context, email, password, subdomain str
 		return "", nil, domain.ErrInvalidCredentials
 	}
 
-	// JWT always gets the resolved tenant ID (needed for middleware to resolve schema)
-	token, err := uc.generateToken(user, t.ID)
+	token, err := uc.generateToken(user, tenantID)
 	if err != nil {
 		return "", nil, err
 	}

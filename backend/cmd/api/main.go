@@ -46,10 +46,10 @@ func main() {
 
 	// Repositories
 	tenantRepo := database.NewTenantRepo(pool)
-	userRepo := database.NewUserRepo(pool)
-	categoryRepo := database.NewCategoryRepo(pool)
-	transactionRepo := database.NewTransactionRepo(pool)
-	expenseLimitRepo := database.NewExpenseLimitRepo(pool)
+	userRepo := database.NewUserRepo()
+	categoryRepo := database.NewCategoryRepo()
+	transactionRepo := database.NewTransactionRepo()
+	expenseLimitRepo := database.NewExpenseLimitRepo()
 
 	// Usecases
 	healthUc := usecase.NewHealthUsecase(pool)
@@ -63,7 +63,7 @@ func main() {
 	// Handlers
 	handlers := router.Handlers{
 		Health:       handler.NewHealthHandler(healthUc),
-		Auth:         handler.NewAuthHandler(authUC),
+		Auth:         handler.NewAuthHandler(authUC, pool),
 		Admin:        handler.NewAdminHandler(adminUC),
 		Category:     handler.NewCategoryHandler(categoryUC),
 		Transaction:  handler.NewTransactionHandler(transactionUC),
@@ -73,7 +73,7 @@ func main() {
 
 	// Router
 	r := gin.Default()
-	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, cfg.AllowedOrigin, tenantCache, handlers)
+	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, cfg.AllowedOrigin, pool, tenantCache, handlers)
 
 	log.Printf("Server starting on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

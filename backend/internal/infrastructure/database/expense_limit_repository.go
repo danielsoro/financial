@@ -8,23 +8,19 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type ExpenseLimitRepo struct {
-	pool *pgxpool.Pool
-}
+type ExpenseLimitRepo struct{}
 
-func NewExpenseLimitRepo(pool *pgxpool.Pool) *ExpenseLimitRepo {
-	return &ExpenseLimitRepo{pool: pool}
+func NewExpenseLimitRepo() *ExpenseLimitRepo {
+	return &ExpenseLimitRepo{}
 }
 
 func (r *ExpenseLimitRepo) Upsert(ctx context.Context, limit *entity.ExpenseLimit) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	if limit.CategoryID != nil {
 		err := conn.QueryRow(ctx,
@@ -70,11 +66,10 @@ func (r *ExpenseLimitRepo) Upsert(ctx context.Context, limit *entity.ExpenseLimi
 }
 
 func (r *ExpenseLimitRepo) Update(ctx context.Context, limit *entity.ExpenseLimit) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`UPDATE expense_limits SET amount = $1, updated_at = NOW()
@@ -92,11 +87,10 @@ func (r *ExpenseLimitRepo) Update(ctx context.Context, limit *entity.ExpenseLimi
 }
 
 func (r *ExpenseLimitRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	result, err := conn.Exec(ctx, `DELETE FROM expense_limits WHERE id = $1`, id)
 	if err != nil {
@@ -109,11 +103,10 @@ func (r *ExpenseLimitRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *ExpenseLimitRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.ExpenseLimit, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	var limit entity.ExpenseLimit
 	var categoryName *string
@@ -138,11 +131,10 @@ func (r *ExpenseLimitRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.
 }
 
 func (r *ExpenseLimitRepo) FindAll(ctx context.Context, month, year int) ([]entity.ExpenseLimit, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	rows, err := conn.Query(ctx,
 		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,
@@ -184,11 +176,10 @@ func (r *ExpenseLimitRepo) FindAll(ctx context.Context, month, year int) ([]enti
 }
 
 func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, month, year int) ([]entity.LimitProgress, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	rows, err := conn.Query(ctx,
 		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,

@@ -69,7 +69,6 @@ func Auth(jwtSecret string, tenantCache *database.TenantCache) gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 
 		c.Set("userID", userID)
-		c.Set("tenantID", tenantID)
 		c.Set("role", role)
 		c.Next()
 	}
@@ -77,10 +76,6 @@ func Auth(jwtSecret string, tenantCache *database.TenantCache) gin.HandlerFunc {
 
 func GetUserID(c *gin.Context) uuid.UUID {
 	return c.MustGet("userID").(uuid.UUID)
-}
-
-func GetTenantID(c *gin.Context) uuid.UUID {
-	return c.MustGet("tenantID").(uuid.UUID)
 }
 
 func GetRole(c *gin.Context) string {

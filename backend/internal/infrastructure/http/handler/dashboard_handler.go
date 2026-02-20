@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dcunha/finance/backend/internal/domain/usecase"
-	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,10 +18,9 @@ func NewDashboardHandler(uc *usecase.DashboardUsecase) *DashboardHandler {
 }
 
 func (h *DashboardHandler) Summary(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 
-	summary, err := h.uc.GetSummary(c.Request.Context(), tenantID, month, year)
+	summary, err := h.uc.GetSummary(c.Request.Context(), month, year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -32,11 +30,10 @@ func (h *DashboardHandler) Summary(c *gin.Context) {
 }
 
 func (h *DashboardHandler) ByCategory(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 	txType := c.DefaultQuery("type", "expense")
 
-	data, err := h.uc.GetByCategory(c.Request.Context(), tenantID, month, year, txType)
+	data, err := h.uc.GetByCategory(c.Request.Context(), month, year, txType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -46,10 +43,9 @@ func (h *DashboardHandler) ByCategory(c *gin.Context) {
 }
 
 func (h *DashboardHandler) LimitsProgress(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	month, year := getMonthYear(c)
 
-	progress, err := h.uc.GetLimitsProgress(c.Request.Context(), tenantID, month, year)
+	progress, err := h.uc.GetLimitsProgress(c.Request.Context(), month, year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return

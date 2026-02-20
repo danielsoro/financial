@@ -6,16 +6,20 @@ import (
 
 	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/usecase"
+	"github.com/dcunha/finance/backend/internal/infrastructure/database"
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
+	"github.com/dcunha/finance/backend/internal/tenant"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthHandler struct {
-	uc *usecase.AuthUsecase
+	uc   *usecase.AuthUsecase
+	pool *pgxpool.Pool
 }
 
-func NewAuthHandler(uc *usecase.AuthUsecase) *AuthHandler {
-	return &AuthHandler{uc: uc}
+func NewAuthHandler(uc *usecase.AuthUsecase, pool *pgxpool.Pool) *AuthHandler {
+	return &AuthHandler{uc: uc, pool: pool}
 }
 
 type loginRequest struct {
@@ -41,14 +45,32 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, user, err := h.uc.Login(c.Request.Context(), req.Email, req.Password, req.Subdomain)
+	// 1. Resolve tenant (public schema — no schema-scoped connection needed)
+	t, err := h.uc.ResolveTenant(c.Request.Context(), req.Subdomain)
+	if err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	// 2. Set up schema-scoped connection for authentication queries
+	ctx := tenant.ContextWithSchema(c.Request.Context(), t.SchemaName)
+	conn, release, err := database.AcquireWithSchema(ctx, h.pool)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+	defer release()
+	ctx = database.ContextWithConn(ctx, conn)
+
+	// 3. Authenticate (UserRepo uses connection from context)
+	token, user, err := h.uc.Authenticate(ctx, req.Email, req.Password, t.ID)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			return
-		}
-		if errors.Is(err, domain.ErrForbidden) {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
