@@ -82,11 +82,26 @@ export default function AppLayout() {
           <HiXMark className="h-6 w-6" />
         </button>
 
-        {/* Logo */}
-        <div className={`py-6 ${collapsed ? 'px-0 flex justify-center' : 'px-6'}`}>
-          <h1 className={`font-bold tracking-tight transition-all duration-300 ${collapsed ? 'text-lg' : 'text-2xl'}`}>
-            {collapsed ? 'F' : 'Finance'}
-          </h1>
+        {/* Logo + Collapse toggle */}
+        <div className={`py-6 flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
+          {!collapsed && (
+            <h1
+              onClick={() => setCollapsed(true)}
+              className="font-bold tracking-tight text-2xl cursor-pointer"
+              title="Recolher menu"
+            >Finance</h1>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden md:flex items-center justify-center p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          >
+            {collapsed ? <HiChevronRight className="h-5 w-5" /> : <HiChevronLeft className="h-5 w-5" />}
+          </button>
+          {/* Mobile: keep showing logo text since collapse isn't used on mobile */}
+          {collapsed && (
+            <h1 className="font-bold tracking-tight text-lg md:hidden">Finance</h1>
+          )}
         </div>
 
         {/* Navigation */}
@@ -173,14 +188,6 @@ export default function AppLayout() {
           </button>
         </div>
 
-        {/* Collapse toggle (desktop only) */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden md:flex items-center justify-center w-full py-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors border-t border-gray-800"
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-        >
-          {collapsed ? <HiChevronRight className="h-5 w-5" /> : <HiChevronLeft className="h-5 w-5" />}
-        </button>
       </aside>
 
       {/* Main Content */}

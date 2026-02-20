@@ -193,71 +193,81 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	}, nil
 }
 
-func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int) (*entity.DashboardSummary, error) {
+func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int, userID *uuid.UUID) (*entity.DashboardSummary, error) {
 	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := conn.Query(ctx,
-		`SELECT type,
-		        COALESCE(SUM(amount), 0) AS total,
-		        COUNT(*) AS count
-		 FROM transactions
-		 WHERE EXTRACT(MONTH FROM date::date) = $1
-		   AND EXTRACT(YEAR FROM date::date) = $2
-		 GROUP BY type`,
-		month, year,
+	userFilter := ""
+	args := []any{month, year}
+	if userID != nil {
+		userFilter = fmt.Sprintf(" AND user_id = $%d", len(args)+1)
+		args = append(args, *userID)
+	}
+
+	query := fmt.Sprintf(`
+		WITH current_month AS (
+			SELECT
+				COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
+				COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses,
+				COUNT(*) FILTER (WHERE type = 'income') AS income_count,
+				COUNT(*) FILTER (WHERE type = 'expense') AS expense_count
+			FROM transactions
+			WHERE EXTRACT(MONTH FROM date::date) = $1
+			  AND EXTRACT(YEAR FROM date::date) = $2
+			  %s
+		),
+		previous_months AS (
+			SELECT
+				COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) AS balance
+			FROM transactions
+			WHERE date < make_date($2::int, $1::int, 1)
+			  %s
+		)
+		SELECT cm.income, cm.expenses, cm.income_count, cm.expense_count, pm.balance
+		FROM current_month cm, previous_months pm`, userFilter, userFilter)
+
+	summary := &entity.DashboardSummary{}
+	err = conn.QueryRow(ctx, query, args...).Scan(
+		&summary.TotalIncome, &summary.TotalExpenses,
+		&summary.IncomeCount, &summary.ExpenseCount,
+		&summary.PreviousBalance,
 	)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	summary := &entity.DashboardSummary{}
-	for rows.Next() {
-		var txType string
-		var total float64
-		var count int
-		if err := rows.Scan(&txType, &total, &count); err != nil {
-			return nil, err
-		}
-		switch txType {
-		case "income":
-			summary.TotalIncome = total
-			summary.IncomeCount = count
-		case "expense":
-			summary.TotalExpenses = total
-			summary.ExpenseCount = count
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	summary.Balance = summary.TotalIncome - summary.TotalExpenses
+	summary.Balance = summary.PreviousBalance + summary.TotalIncome - summary.TotalExpenses
 
 	return summary, nil
 }
 
-func (r *TransactionRepo) GetByCategory(ctx context.Context, month, year int, txType string) ([]entity.CategoryTotal, error) {
+func (r *TransactionRepo) GetByCategory(ctx context.Context, month, year int, txType string, userID *uuid.UUID) ([]entity.CategoryTotal, error) {
 	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := conn.Query(ctx,
+	userFilter := ""
+	args := []any{month, year, txType}
+	if userID != nil {
+		userFilter = fmt.Sprintf(" AND t.user_id = $%d", len(args)+1)
+		args = append(args, *userID)
+	}
+
+	query := fmt.Sprintf(
 		`SELECT t.category_id, c.name AS category_name, SUM(t.amount) AS total
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
 		 WHERE EXTRACT(MONTH FROM t.date::date) = $1
 		   AND EXTRACT(YEAR FROM t.date::date) = $2
 		   AND t.type = $3
+		   %s
 		 GROUP BY t.category_id, c.name
-		 ORDER BY total DESC`,
-		month, year, txType,
-	)
+		 ORDER BY total DESC`, userFilter)
+
+	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

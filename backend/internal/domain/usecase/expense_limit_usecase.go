@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/dcunha/finance/backend/internal/domain/repository"
 	"github.com/google/uuid"
@@ -38,4 +39,30 @@ func (uc *ExpenseLimitUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return uc.expenseLimitRepo.Delete(ctx, id)
+}
+
+func (uc *ExpenseLimitUsecase) CopyLimits(ctx context.Context, fromMonth, fromYear, toMonth, toYear int, userID uuid.UUID) (int, error) {
+	if fromMonth == toMonth && fromYear == toYear {
+		return 0, domain.ErrSameMonth
+	}
+	limits, err := uc.expenseLimitRepo.FindAll(ctx, fromMonth, fromYear)
+	if err != nil {
+		return 0, err
+	}
+	if len(limits) == 0 {
+		return 0, domain.ErrNotFound
+	}
+	for _, limit := range limits {
+		newLimit := &entity.ExpenseLimit{
+			UserID:     userID,
+			CategoryID: limit.CategoryID,
+			Month:      toMonth,
+			Year:       toYear,
+			Amount:     limit.Amount,
+		}
+		if err := uc.expenseLimitRepo.Upsert(ctx, newLimit); err != nil {
+			return 0, err
+		}
+	}
+	return len(limits), nil
 }
