@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/dcunha/finance/backend/internal/domain/usecase"
-	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -35,8 +34,7 @@ type resetPasswordRequest struct {
 }
 
 func (h *AdminHandler) ListUsers(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
-	users, err := h.uc.ListUsers(c.Request.Context(), tenantID)
+	users, err := h.uc.ListUsers(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -45,13 +43,12 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 }
 
 func (h *AdminHandler) CreateUser(c *gin.Context) {
-	tenantID := middleware.GetTenantID(c)
 	var req createUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user, err := h.uc.CreateUser(c.Request.Context(), tenantID, req.Name, req.Email, req.Password, req.Role)
+	user, err := h.uc.CreateUser(c.Request.Context(), req.Name, req.Email, req.Password, req.Role)
 	if err != nil {
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})

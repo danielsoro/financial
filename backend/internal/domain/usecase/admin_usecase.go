@@ -18,11 +18,11 @@ func NewAdminUsecase(userRepo repository.UserRepository) *AdminUsecase {
 	return &AdminUsecase{userRepo: userRepo}
 }
 
-func (uc *AdminUsecase) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]entity.AdminUser, error) {
+func (uc *AdminUsecase) ListUsers(ctx context.Context) ([]entity.AdminUser, error) {
 	return uc.userRepo.FindAll(ctx)
 }
 
-func (uc *AdminUsecase) CreateUser(ctx context.Context, tenantID uuid.UUID, name, email, password, role string) (*entity.AdminUser, error) {
+func (uc *AdminUsecase) CreateUser(ctx context.Context, name, email, password, role string) (*entity.AdminUser, error) {
 	if role != "admin" && role != "user" {
 		return nil, domain.ErrInvalidRole
 	}

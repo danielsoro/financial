@@ -8,23 +8,19 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UserRepo struct {
-	pool *pgxpool.Pool
-}
+type UserRepo struct{}
 
-func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
-	return &UserRepo{pool: pool}
+func NewUserRepo() *UserRepo {
+	return &UserRepo{}
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *entity.User) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)
@@ -41,11 +37,10 @@ func (r *UserRepo) Create(ctx context.Context, user *entity.User) error {
 }
 
 func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	var u entity.User
 	err = conn.QueryRow(ctx,
@@ -61,11 +56,10 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*entity.User,
 }
 
 func (r *UserRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	var u entity.User
 	err = conn.QueryRow(ctx,
@@ -81,11 +75,10 @@ func (r *UserRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, er
 }
 
 func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`UPDATE users SET name = $1, email = $2, password_hash = $3, role = $4, updated_at = NOW()
@@ -106,11 +99,10 @@ func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
 }
 
 func (r *UserRepo) FindAll(ctx context.Context) ([]entity.AdminUser, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	rows, err := conn.Query(ctx,
 		`SELECT id, name, email, role, created_at, updated_at
@@ -139,11 +131,10 @@ func (r *UserRepo) FindAll(ctx context.Context) ([]entity.AdminUser, error) {
 }
 
 func (r *UserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	result, err := conn.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
 	if err != nil {

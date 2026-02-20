@@ -8,6 +8,7 @@ import (
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/handler"
 	"github.com/dcunha/finance/backend/internal/infrastructure/http/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Handlers struct {
@@ -20,7 +21,7 @@ type Handlers struct {
 	Admin        *handler.AdminHandler
 }
 
-func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, tenantCache *database.TenantCache, h Handlers) {
+func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, pool *pgxpool.Pool, tenantCache *database.TenantCache, h Handlers) {
 	r.Use(middleware.CORS(allowedOrigin))
 
 	r.GET("/health", h.Health.Health)
@@ -34,6 +35,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	// Protected routes
 	protected := api.Group("")
 	protected.Use(middleware.Auth(jwtSecret, tenantCache))
+	protected.Use(middleware.SchemaConn(pool))
 
 	// Profile
 	protected.GET("/profile", h.Auth.GetProfile)

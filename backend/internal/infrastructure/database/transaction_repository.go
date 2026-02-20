@@ -10,23 +10,19 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type TransactionRepo struct {
-	pool *pgxpool.Pool
-}
+type TransactionRepo struct{}
 
-func NewTransactionRepo(pool *pgxpool.Pool) *TransactionRepo {
-	return &TransactionRepo{pool: pool}
+func NewTransactionRepo() *TransactionRepo {
+	return &TransactionRepo{}
 }
 
 func (r *TransactionRepo) Create(ctx context.Context, tx *entity.Transaction) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`INSERT INTO transactions (user_id, category_id, type, amount, description, date)
@@ -41,11 +37,10 @@ func (r *TransactionRepo) Create(ctx context.Context, tx *entity.Transaction) er
 }
 
 func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`UPDATE transactions
@@ -64,11 +59,10 @@ func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) er
 }
 
 func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	result, err := conn.Exec(ctx, `DELETE FROM transactions WHERE id = $1`, id)
 	if err != nil {
@@ -81,11 +75,10 @@ func (r *TransactionRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *TransactionRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Transaction, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	var tx entity.Transaction
 	err = conn.QueryRow(ctx,
@@ -106,11 +99,10 @@ func (r *TransactionRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.T
 }
 
 func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.TransactionFilter) (*entity.PaginatedTransactions, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	if filter.PerPage <= 0 {
 		filter.PerPage = 20
@@ -202,11 +194,10 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 }
 
 func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int) (*entity.DashboardSummary, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	rows, err := conn.Query(ctx,
 		`SELECT type,
@@ -251,11 +242,10 @@ func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int) (*ent
 }
 
 func (r *TransactionRepo) GetByCategory(ctx context.Context, month, year int, txType string) ([]entity.CategoryTotal, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	rows, err := conn.Query(ctx,
 		`SELECT t.category_id, c.name AS category_name, SUM(t.amount) AS total

@@ -9,7 +9,7 @@ App de finanças **multi-tenant** com **Go backend** + **React frontend** + **Po
 - **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
 - **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`, `localhost` → tenant `root`)
 - **Tabela `tenants`** no schema `public` como registro central (id, name, domain, schema_name, is_active)
-- **Isolamento:** dados isolados por schema; queries usam `SET search_path` por conexão
+- **Isolamento:** dados isolados por schema; middleware `SchemaConn` configura `SET search_path` uma vez por request e armazena a conexão no context via `ConnFromContext`
 - **Novo tenant:** adicionar ao `var.tenants` no Terraform → app cria schema + seed no startup
 - **2 roles:** `admin` (gerencia usuários do tenant), `user`
 - **Somente admin cria usuários** — não há registro público
@@ -43,8 +43,8 @@ finance/
 │   │   │   ├── repository/  # Interfaces dos repositórios
 │   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
 │   │   └── infrastructure/
-│   │       ├── database/    # Implementação PostgreSQL (pgx), SchemaManager, TenantCache, AcquireWithSchema
-│   │       └── http/        # Handlers, middleware (auth, cors, role), router (Gin)
+│   │       ├── database/    # Implementação PostgreSQL (pgx), SchemaManager, TenantCache, ConnFromContext
+│   │       └── http/        # Handlers, middleware (auth, cors, role, schema), router (Gin)
 │   ├── migrations/          # Public migrations (tabela tenants)
 │   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits)
 ├── frontend/         # React SPA
@@ -86,6 +86,9 @@ finance/
 - **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, role
 - **Arquitetura:** Clean Architecture — entity → repository interface → usecase → handler
 - **Erros de domínio** definidos em `internal/domain/errors.go` e mapeados para HTTP status nos handlers
+- **Acesso ao banco:** repositórios obtêm a conexão via `database.ConnFromContext(ctx)` — a conexão já vem com `search_path` configurado pelo middleware `SchemaConn`
+- **`AcquireWithSchema`:** usado apenas pelo middleware `SchemaConn` e pelo login handler (que precisa resolver o tenant antes do middleware)
+- **Fluxo do login:** handler resolve tenant via `ResolveTenant`, configura conexão com `AcquireWithSchema` + `ContextWithConn`, depois chama `Authenticate`
 - **CORS:** controlado por `ALLOWED_ORIGIN` — aceita o domínio e todos os subdomínios (tenants). Se vazio ou `*`, aceita qualquer origin
 
 ### Frontend

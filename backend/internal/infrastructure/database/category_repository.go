@@ -9,23 +9,19 @@ import (
 	"github.com/dcunha/finance/backend/internal/domain/entity"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type CategoryRepo struct {
-	pool *pgxpool.Pool
-}
+type CategoryRepo struct{}
 
-func NewCategoryRepo(pool *pgxpool.Pool) *CategoryRepo {
-	return &CategoryRepo{pool: pool}
+func NewCategoryRepo() *CategoryRepo {
+	return &CategoryRepo{}
 }
 
 func (r *CategoryRepo) Create(ctx context.Context, cat *entity.Category) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`INSERT INTO categories (user_id, parent_id, name, type, is_default)
@@ -43,11 +39,10 @@ func (r *CategoryRepo) Create(ctx context.Context, cat *entity.Category) error {
 }
 
 func (r *CategoryRepo) Update(ctx context.Context, cat *entity.Category) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	err = conn.QueryRow(ctx,
 		`UPDATE categories SET name = $1, type = $2, parent_id = $3, updated_at = NOW()
@@ -68,11 +63,10 @@ func (r *CategoryRepo) Update(ctx context.Context, cat *entity.Category) error {
 }
 
 func (r *CategoryRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 
 	result, err := conn.Exec(ctx, `DELETE FROM categories WHERE id = $1`, id)
 	if err != nil {
@@ -85,11 +79,10 @@ func (r *CategoryRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *CategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Category, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	var cat entity.Category
 	err = conn.QueryRow(ctx,
@@ -106,11 +99,10 @@ func (r *CategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Cate
 }
 
 func (r *CategoryRepo) FindAll(ctx context.Context, catType string) ([]entity.Category, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
 
 	query := `WITH RECURSIVE cat_tree AS (
 		SELECT id, user_id, parent_id, name, type, is_default, created_at, updated_at,
@@ -168,11 +160,10 @@ func (r *CategoryRepo) FindAll(ctx context.Context, catType string) ([]entity.Ca
 }
 
 func (r *CategoryRepo) IsInUse(ctx context.Context, id uuid.UUID) (bool, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return false, err
 	}
-	defer release()
 
 	var exists bool
 	err = conn.QueryRow(ctx,
@@ -185,11 +176,10 @@ func (r *CategoryRepo) IsInUse(ctx context.Context, id uuid.UUID) (bool, error) 
 }
 
 func (r *CategoryRepo) IsSubtreeInUse(ctx context.Context, id uuid.UUID) (bool, error) {
-	conn, release, err := AcquireWithSchema(ctx, r.pool)
+	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return false, err
 	}
-	defer release()
 
 	var exists bool
 	err = conn.QueryRow(ctx,

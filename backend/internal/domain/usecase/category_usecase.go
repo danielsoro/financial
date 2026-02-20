@@ -17,11 +17,11 @@ func NewCategoryUsecase(repo repository.CategoryRepository) *CategoryUsecase {
 	return &CategoryUsecase{categoryRepo: repo}
 }
 
-func (uc *CategoryUsecase) List(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
+func (uc *CategoryUsecase) List(ctx context.Context, catType string) ([]entity.Category, error) {
 	return uc.categoryRepo.FindAll(ctx, catType)
 }
 
-func (uc *CategoryUsecase) ListTree(ctx context.Context, tenantID uuid.UUID, catType string) ([]entity.Category, error) {
+func (uc *CategoryUsecase) ListTree(ctx context.Context, catType string) ([]entity.Category, error) {
 	cats, err := uc.categoryRepo.FindAll(ctx, catType)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (uc *CategoryUsecase) ListTree(ctx context.Context, tenantID uuid.UUID, cat
 	return buildTree(cats), nil
 }
 
-func (uc *CategoryUsecase) Create(ctx context.Context, tenantID, userID uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
+func (uc *CategoryUsecase) Create(ctx context.Context, userID uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
 	if parentID != nil {
 		parent, err := uc.categoryRepo.FindByID(ctx, *parentID)
 		if err != nil {
@@ -51,7 +51,7 @@ func (uc *CategoryUsecase) Create(ctx context.Context, tenantID, userID uuid.UUI
 	return cat, nil
 }
 
-func (uc *CategoryUsecase) Update(ctx context.Context, tenantID uuid.UUID, id uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
+func (uc *CategoryUsecase) Update(ctx context.Context, id uuid.UUID, name, catType string, parentID *uuid.UUID) (*entity.Category, error) {
 	cat, err := uc.categoryRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (uc *CategoryUsecase) checkCycle(ctx context.Context, startID, targetID uui
 	}
 }
 
-func (uc *CategoryUsecase) Delete(ctx context.Context, tenantID uuid.UUID, id uuid.UUID) error {
+func (uc *CategoryUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 	cat, err := uc.categoryRepo.FindByID(ctx, id)
 	if err != nil {
 		return err

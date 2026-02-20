@@ -20,7 +20,7 @@ func (uc *TransactionUsecase) List(ctx context.Context, filter entity.Transactio
 	return uc.transactionRepo.FindAll(ctx, filter)
 }
 
-func (uc *TransactionUsecase) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*entity.Transaction, error) {
+func (uc *TransactionUsecase) GetByID(ctx context.Context, id uuid.UUID) (*entity.Transaction, error) {
 	return uc.transactionRepo.FindByID(ctx, id)
 }
 
@@ -28,14 +28,14 @@ func (uc *TransactionUsecase) Create(ctx context.Context, tx *entity.Transaction
 	return uc.transactionRepo.Create(ctx, tx)
 }
 
-func (uc *TransactionUsecase) Update(ctx context.Context, tenantID uuid.UUID, tx *entity.Transaction) error {
+func (uc *TransactionUsecase) Update(ctx context.Context, tx *entity.Transaction) error {
 	if _, err := uc.transactionRepo.FindByID(ctx, tx.ID); err != nil {
 		return err
 	}
 	return uc.transactionRepo.Update(ctx, tx)
 }
 
-func (uc *TransactionUsecase) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
+func (uc *TransactionUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 	if _, err := uc.transactionRepo.FindByID(ctx, id); err != nil {
 		return err
 	}
