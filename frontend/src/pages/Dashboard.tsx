@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '../services/dashboard';
 import MonthSelector from '../components/ui/MonthSelector';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { HiArrowTrendingUp, HiArrowTrendingDown, HiBanknotes } from 'react-icons/hi2';
+import { HiArrowTrendingUp, HiArrowTrendingDown, HiBanknotes, HiUser, HiUserGroup } from 'react-icons/hi2';
+import type { DashboardScope } from '../services/dashboard';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -14,27 +15,54 @@ export default function Dashboard() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+  const [scope, setScope] = useState<DashboardScope>('tenant');
 
   const { data: summary } = useQuery({
-    queryKey: ['dashboard-summary', month, year],
-    queryFn: () => dashboardService.summary(month, year).then((r) => r.data),
+    queryKey: ['dashboard-summary', month, year, scope],
+    queryFn: () => dashboardService.summary(month, year, scope).then((r) => r.data),
   });
 
   const { data: byCategory = [] } = useQuery({
-    queryKey: ['dashboard-by-category', month, year],
-    queryFn: () => dashboardService.byCategory(month, year, 'expense').then((r) => r.data),
+    queryKey: ['dashboard-by-category', month, year, scope],
+    queryFn: () => dashboardService.byCategory(month, year, 'expense', scope).then((r) => r.data),
   });
 
   const { data: limitsProgress = [] } = useQuery({
-    queryKey: ['dashboard-limits', month, year],
-    queryFn: () => dashboardService.limitsProgress(month, year).then((r) => r.data),
+    queryKey: ['dashboard-limits', month, year, scope],
+    queryFn: () => dashboardService.limitsProgress(month, year, scope).then((r) => r.data),
   });
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <MonthSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => setScope('user')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                scope === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <HiUser className="w-4 h-4" />
+              <span className="hidden sm:inline">Pessoal</span>
+            </button>
+            <button
+              onClick={() => setScope('tenant')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                scope === 'tenant'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <HiUserGroup className="w-4 h-4" />
+              <span className="hidden sm:inline">Total da conta</span>
+            </button>
+          </div>
+          <MonthSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -70,6 +98,9 @@ export default function Dashboard() {
           </div>
           <p className={`text-2xl font-bold ${(summary?.balance ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
             {formatCurrency(summary?.balance ?? 0)}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Saldo anterior: {formatCurrency(summary?.previous_balance ?? 0)}
           </p>
         </div>
       </div>

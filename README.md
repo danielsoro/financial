@@ -79,7 +79,7 @@ Base: `/api/v1`
 | Profile | `GET/PUT /profile`, `POST /profile/change-password` |
 | Categories | `GET/POST /categories`, `PUT/DELETE /categories/:id` |
 | Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` |
-| Expense Limits | `GET/POST /expense-limits`, `PUT/DELETE /expense-limits/:id` |
+| Expense Limits | `GET/POST /expense-limits`, `POST /expense-limits/copy`, `PUT/DELETE /expense-limits/:id` |
 | Dashboard | `GET /dashboard/summary`, `/by-category`, `/limits-progress` |
 | Admin | `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password` |
 

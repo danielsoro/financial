@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
@@ -175,13 +176,23 @@ func (r *ExpenseLimitRepo) FindAll(ctx context.Context, month, year int) ([]enti
 	return limits, nil
 }
 
-func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, month, year int) ([]entity.LimitProgress, error) {
+func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, month, year int, userID *uuid.UUID) ([]entity.LimitProgress, error) {
 	conn, err := ConnFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := conn.Query(ctx,
+	userFilterOuter := ""
+	userFilterLateral := ""
+	args := []any{month, year}
+	if userID != nil {
+		argIdx := len(args) + 1
+		userFilterOuter = fmt.Sprintf(" AND el.user_id = $%d", argIdx)
+		userFilterLateral = fmt.Sprintf(" AND t.user_id = $%d", argIdx)
+		args = append(args, *userID)
+	}
+
+	query := fmt.Sprintf(
 		`SELECT el.id, el.user_id, el.category_id, c.name AS category_name,
 		        el.month, el.year, el.amount, el.created_at, el.updated_at,
 		        COALESCE(spent.total, 0) AS spent
@@ -197,11 +208,13 @@ func (r *ExpenseLimitRepo) GetLimitsProgress(ctx context.Context, month, year in
 				  el.category_id IS NULL
 				  OR t.category_id = el.category_id
 			  )
+			  %s
 		 ) spent ON true
 		 WHERE el.month = $1 AND el.year = $2
-		 ORDER BY el.created_at ASC`,
-		month, year,
-	)
+		 %s
+		 ORDER BY el.created_at ASC`, userFilterLateral, userFilterOuter)
+
+	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

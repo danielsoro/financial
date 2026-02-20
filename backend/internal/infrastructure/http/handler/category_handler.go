@@ -153,6 +153,8 @@ func mapDomainError(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, domain.ErrTenantNotFound):
 		return http.StatusNotFound
+	case errors.Is(err, domain.ErrSameMonth):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

@@ -98,6 +98,7 @@ export interface DashboardSummary {
   total_income: number;
   total_expenses: number;
   balance: number;
+  previous_balance: number;
   income_count: number;
   expense_count: number;
 }
