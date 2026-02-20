@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   HiHome,
@@ -27,17 +27,13 @@ const navItems = [
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const isAdmin = user?.role === 'admin';
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Close mobile sidebar on navigation
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+  const closeMobile = () => setMobileOpen(false);
 
   // Reset mobileOpen when resizing to desktop
   useEffect(() => {
@@ -100,6 +96,7 @@ export default function AppLayout() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={closeMobile}
               className={({ isActive }) =>
                 `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
@@ -128,6 +125,7 @@ export default function AppLayout() {
               )}
               <NavLink
                 to="/admin/users"
+                onClick={closeMobile}
                 className={({ isActive }) =>
                   `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
@@ -148,7 +146,7 @@ export default function AppLayout() {
         <div className={`py-4 border-t border-gray-800 ${collapsed ? 'px-2' : 'px-3'}`}>
           {user && (
             <button
-              onClick={() => navigate('/profile')}
+              onClick={() => { navigate('/profile'); closeMobile(); }}
               className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} w-full px-3 py-2 mb-2 rounded-lg hover:bg-gray-800 transition-colors group text-left`}
               title={collapsed ? `${user.name} - Perfil` : undefined}
             >
