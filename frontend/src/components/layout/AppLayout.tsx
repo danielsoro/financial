@@ -64,7 +64,8 @@ export default function AppLayout() {
         >
           <HiBars3 className="h-6 w-6" />
         </button>
-        <h1 className="ml-3 text-lg font-bold text-gray-900">Finance</h1>
+        <img src="/logo.svg" alt="DNA Fami" className="ml-3 h-6 w-6" />
+        <h1 className="ml-2 text-lg font-bold text-gray-900">DNA Fami</h1>
       </div>
 
       {/* Sidebar */}
@@ -84,13 +85,16 @@ export default function AppLayout() {
 
         {/* Logo + Collapse toggle */}
         <div className={`py-6 flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
-          {!collapsed && (
-            <h1
-              onClick={() => setCollapsed(true)}
-              className="font-bold tracking-tight text-2xl cursor-pointer"
-              title="Recolher menu"
-            >Finance</h1>
-          )}
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="DNA Fami" className={`transition-all duration-300 ${collapsed ? 'h-7 w-7' : 'h-8 w-8'}`} />
+            {!collapsed && (
+              <h1
+                onClick={() => setCollapsed(true)}
+                className="font-bold tracking-tight text-2xl cursor-pointer"
+                title="Recolher menu"
+              >DNA Fami</h1>
+            )}
+          </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden md:flex items-center justify-center p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
@@ -100,7 +104,10 @@ export default function AppLayout() {
           </button>
           {/* Mobile: keep showing logo text since collapse isn't used on mobile */}
           {collapsed && (
-            <h1 className="font-bold tracking-tight text-lg md:hidden">Finance</h1>
+            <div className="flex items-center gap-2 md:hidden">
+              <img src="/logo.svg" alt="DNA Fami" className="h-7 w-7" />
+              <h1 className="font-bold tracking-tight text-lg">DNA Fami</h1>
+            </div>
           )}
         </div>
 
