@@ -39,7 +39,7 @@ export default function MonthSelector({ month, year, onChange }: MonthSelectorPr
   };
 
   return (
-    <div className="inline-flex items-center gap-4">
+    <div className="inline-flex items-center gap-2 sm:gap-4">
       <button
         onClick={handlePrevious}
         className="rounded-lg bg-white shadow p-2 hover:bg-gray-100 transition-colors"
@@ -48,7 +48,7 @@ export default function MonthSelector({ month, year, onChange }: MonthSelectorPr
         <HiChevronLeft className="h-5 w-5 text-gray-600" />
       </button>
 
-      <span className="text-lg font-semibold text-gray-800 min-w-[180px] text-center">
+      <span className="text-base sm:text-lg font-semibold text-gray-800 min-w-[140px] sm:min-w-[180px] text-center">
         {MONTH_NAMES[month - 1]} {year}
       </span>
 

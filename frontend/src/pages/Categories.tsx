@@ -20,7 +20,7 @@ const typeBadgeColors: Record<string, string> = {
   both: 'bg-blue-100 text-blue-800',
 };
 
-interface CategoryRowProps {
+interface CategoryItemProps {
   cat: Category;
   level: number;
   expanded: Record<string, boolean>;
@@ -30,7 +30,82 @@ interface CategoryRowProps {
   onAddChild: (cat: Category) => void;
 }
 
-function CategoryRow({ cat, level, expanded, onToggle, onEdit, onDelete, onAddChild }: CategoryRowProps) {
+function CategoryCard({ cat, level, expanded, onToggle, onEdit, onDelete, onAddChild }: CategoryItemProps) {
+  const hasChildren = cat.children && cat.children.length > 0;
+  const isExpanded = expanded[cat.id];
+
+  return (
+    <>
+      <div className="bg-white rounded-xl shadow-sm p-4" style={{ marginLeft: `${level * 16}px` }}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1">
+            {hasChildren ? (
+              <button
+                onClick={() => onToggle(cat.id)}
+                className="p-0.5 text-gray-400 hover:text-gray-600 rounded"
+              >
+                {isExpanded ? (
+                  <HiChevronDown className="w-4 h-4" />
+                ) : (
+                  <HiChevronRight className="w-4 h-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-5" />
+            )}
+            <span className="font-medium text-gray-900">{cat.name}</span>
+          </div>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeBadgeColors[cat.type]}`}>
+            {typeLabels[cat.type]}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500">{cat.is_default ? 'Padrão' : 'Custom'}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onAddChild(cat)}
+              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              title="Criar subcategoria"
+            >
+              <HiPlus className="w-4 h-4" />
+            </button>
+            {!cat.is_default && (
+              <>
+                <button
+                  onClick={() => onEdit(cat)}
+                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <HiPencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onDelete(cat)}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <HiTrash className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      {hasChildren && isExpanded &&
+        cat.children!.map((child) => (
+          <CategoryCard
+            key={child.id}
+            cat={child}
+            level={level + 1}
+            expanded={expanded}
+            onToggle={onToggle}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onAddChild={onAddChild}
+          />
+        ))}
+    </>
+  );
+}
+
+function CategoryRow({ cat, level, expanded, onToggle, onEdit, onDelete, onAddChild }: CategoryItemProps) {
   const hasChildren = cat.children && cat.children.length > 0;
   const isExpanded = expanded[cat.id];
 
@@ -218,41 +293,71 @@ export default function Categories() {
         <h1 className="text-2xl font-bold text-gray-900">Categorias</h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <HiPlus className="w-5 h-5" /> Nova Categoria
         </button>
       </div>
 
+      {/* FAB mobile */}
+      <button
+        onClick={openCreate}
+        className="md:hidden fixed bottom-6 right-6 z-20 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+        aria-label="Nova Categoria"
+      >
+        <HiPlus className="w-6 h-6" />
+      </button>
+
       {isLoading ? (
         <p className="text-gray-500">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Nome</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tipo</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Origem</th>
-                <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {categories.map((cat) => (
-                <CategoryRow
-                  key={cat.id}
-                  cat={cat}
-                  level={0}
-                  expanded={expanded}
-                  onToggle={toggleExpand}
-                  onEdit={openEdit}
-                  onDelete={setDeleting}
-                  onAddChild={openCreateChild}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {categories.map((cat) => (
+              <CategoryCard
+                key={cat.id}
+                cat={cat}
+                level={0}
+                expanded={expanded}
+                onToggle={toggleExpand}
+                onEdit={openEdit}
+                onDelete={setDeleting}
+                onAddChild={openCreateChild}
+              />
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Nome</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tipo</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Origem</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {categories.map((cat) => (
+                  <CategoryRow
+                    key={cat.id}
+                    cat={cat}
+                    level={0}
+                    expanded={expanded}
+                    onToggle={toggleExpand}
+                    onEdit={openEdit}
+                    onDelete={setDeleting}
+                    onAddChild={openCreateChild}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={closeModal} title={modalTitle}>

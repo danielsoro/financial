@@ -116,11 +116,20 @@ export default function ExpenseLimits() {
         <h1 className="text-2xl font-bold text-gray-900">Tetos de Gastos</h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <HiPlus className="w-5 h-5" /> Novo Teto
         </button>
       </div>
+
+      {/* FAB mobile */}
+      <button
+        onClick={openCreate}
+        className="md:hidden fixed bottom-6 right-6 z-20 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+        aria-label="Novo Teto"
+      >
+        <HiPlus className="w-6 h-6" />
+      </button>
 
       <div className="mb-6">
         <MonthSelector
@@ -144,7 +153,7 @@ export default function ExpenseLimits() {
           )}
           {limits.map((limit) => (
             <div key={limit.id} className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                 <h3 className="font-medium text-gray-900">
                   {limit.category_id
                     ? categories.find((c) => c.id === limit.category_id)

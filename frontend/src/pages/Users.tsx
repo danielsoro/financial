@@ -123,66 +123,121 @@ export default function Users() {
         <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <HiPlus className="w-5 h-5" /> Novo Usuário
         </button>
       </div>
 
+      {/* FAB mobile */}
+      <button
+        onClick={openCreate}
+        className="md:hidden fixed bottom-6 right-6 z-20 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+        aria-label="Novo Usuário"
+      >
+        <HiPlus className="w-6 h-6" />
+      </button>
+
       {isLoading ? (
         <p className="text-gray-500">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Nome</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Email</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Papel</th>
-                <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-gray-900">{user.name}</td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">{user.email}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColors[user.role]}`}>
-                      {roleLabels[user.role]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setResetUser(user);
-                          setNewPassword('');
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                        title="Redefinir senha"
-                      >
-                        <HiKey className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openEdit(user)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <HiPencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleting(user)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <HiTrash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {users.map((u) => (
+              <div key={u.id} className="bg-white rounded-xl shadow-sm p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium text-gray-900">{u.name}</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColors[u.role]}`}>
+                    {roleLabels[u.role]}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500 truncate mr-2">{u.email}</p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setResetUser(u);
+                        setNewPassword('');
+                      }}
+                      className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                      title="Redefinir senha"
+                    >
+                      <HiKey className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openEdit(u)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <HiPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleting(u)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <HiTrash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Nome</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Email</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Papel</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-gray-900">{user.name}</td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColors[user.role]}`}>
+                        {roleLabels[user.role]}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setResetUser(user);
+                            setNewPassword('');
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                          title="Redefinir senha"
+                        >
+                          <HiKey className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEdit(user)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <HiPencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleting(user)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <HiTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          </div>
+        </>
       )}
 
       {/* Create / Edit Modal */}

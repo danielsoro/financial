@@ -41,9 +41,9 @@ src/
 │   │   ├── ProtectedRoute.tsx   # Guard de rota autenticada
 │   │   └── AdminRoute.tsx       # Guard de rota admin
 │   ├── layout/
-│   │   └── AppLayout.tsx        # Layout com sidebar (links admin condicionais)
+│   │   └── AppLayout.tsx        # Layout com sidebar colapsável/responsiva (desktop collapse + mobile overlay)
 │   ├── transactions/
-│   │   └── TransactionPage.tsx  # Tabela de transações
+│   │   └── TransactionPage.tsx  # Tabela de transações (desktop) + cards (mobile)
 │   └── ui/                      # Componentes reutilizáveis
 │       ├── Modal.tsx
 │       ├── ConfirmDialog.tsx
@@ -64,7 +64,7 @@ src/
 │   └── index.ts           # User (com tenant_id, role), Tenant, AdminUser, etc.
 ├── App.tsx                # Router + QueryClient
 ├── main.tsx               # Entrypoint
-└── index.css              # @import "tailwindcss"
+└── index.css              # @import "tailwindcss" + overflow-x fix
 ```
 
 ## Rotas
@@ -134,5 +134,14 @@ npm run dev      # Dev server em http://localhost:5173
 npm run build    # Build de produção
 npx tsc --noEmit # Type-check
 ```
+
+## Responsividade
+
+- **Breakpoint principal:** `md` (768px) — abaixo é mobile, acima é desktop
+- **Sidebar:** colapsável no desktop (expandida `w-64` / colapsada `w-16` só ícones), overlay no mobile com hamburger menu
+- **Tabelas → Cards:** páginas com tabela usam `hidden md:block` (tabela desktop) + `md:hidden` (cards mobile)
+- **FAB:** botão "Adicionar" vira circular fixo (`fixed bottom-6 right-6`) no mobile
+- **MonthSelector:** tamanho e espaçamento adaptáveis (`min-w-[140px]` mobile, `sm:min-w-[180px]` desktop)
+- **Overflow:** `html, body { overflow-x: hidden }` em `index.css` para evitar scroll horizontal no mobile
 
 Para testar subdomínios em dev, acesse `financial.localhost:5173`.

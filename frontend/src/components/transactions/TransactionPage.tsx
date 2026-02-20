@@ -149,16 +149,27 @@ export default function TransactionPage({ type, title }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <MonthSelector month={month} year={year} onChange={handleMonthChange} />
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <HiPlus className="w-5 h-5" /> Adicionar
-        </button>
+        <div className="flex items-center gap-3">
+          <MonthSelector month={month} year={year} onChange={handleMonthChange} />
+          <button
+            onClick={openCreate}
+            className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            <HiPlus className="w-5 h-5" /> Adicionar
+          </button>
+        </div>
       </div>
+
+      {/* FAB mobile */}
+      <button
+        onClick={openCreate}
+        className="md:hidden fixed bottom-6 right-6 z-20 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+        aria-label="Adicionar"
+      >
+        <HiPlus className="w-6 h-6" />
+      </button>
 
       <div className="flex gap-4 mb-4">
         <Autocomplete
@@ -174,6 +185,48 @@ export default function TransactionPage({ type, title }: Props) {
         <p className="text-gray-500">Carregando...</p>
       ) : (
         <>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {result?.data.map((tx) => (
+              <div key={tx.id} className="bg-white rounded-xl shadow-sm p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <p className="font-medium text-gray-900 truncate mr-2">
+                    {tx.description || '-'}
+                  </p>
+                  <span className={`font-medium whitespace-nowrap ${colorClass}`}>
+                    {formatCurrency(tx.amount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    <span>{tx.category_name}</span>
+                    <span className="mx-1">&middot;</span>
+                    <span>{formatDate(tx.date)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEdit(tx)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <HiPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleting(tx)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <HiTrash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {result?.data.length === 0 && (
+              <p className="text-center text-gray-400 py-8">Nenhuma transação encontrada</p>
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block">
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -221,6 +274,7 @@ export default function TransactionPage({ type, title }: Props) {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
 
           {result && result.total_pages > 1 && (

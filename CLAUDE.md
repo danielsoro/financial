@@ -103,6 +103,15 @@ finance/
 - **Ícones:** `react-icons/hi2`
 - **Gráficos:** `recharts`
 
+#### Layout Responsivo
+
+- **Sidebar colapsável** — estados `collapsed` e `mobileOpen` no `AppLayout`
+- **Desktop (md+):** sidebar alterna entre expandida (`w-64`) e colapsada (`w-16`, só ícones)
+- **Mobile (<md):** sidebar oculta com overlay, hamburger menu no header fixo (`h-14`)
+- **Botão collapse:** chevron no fundo da sidebar (desktop only)
+- **Navegação mobile:** fecha sidebar ao mudar de rota (`useLocation`)
+- **Main content:** `transition-[margin]`, padding responsivo (`px-4` mobile / `md:px-8` desktop)
+
 #### Ordem de imports
 
 1. React (`import { useState } from 'react'`)
@@ -132,6 +141,14 @@ finance/
 - **MonthSelector** — navegação mês/ano com botões anterior/próximo
 - **Autocomplete** — dropdown com busca e navegação por teclado
 - **Pagination** — botões Anterior/Próximo com indicador de página
+
+### Responsividade
+
+- **Breakpoint principal:** `md` (768px) — mobile vs desktop
+- **Tabelas → Cards no mobile:** páginas com tabela renderizam `hidden md:block` (tabela desktop) + `md:hidden` (cards mobile)
+- **FAB (Floating Action Button):** botão "Adicionar" vira `fixed bottom-6 right-6` circular no mobile, inline no desktop (`hidden md:flex`)
+- **MonthSelector:** `min-w-[140px]` mobile, `sm:min-w-[180px]` desktop; `gap-2` mobile, `sm:gap-4` desktop
+- **Overflow:** `html/body { overflow-x: hidden }` no `index.css`
 
 ### Padrão de mutation (React Query)
 
