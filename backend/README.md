@@ -112,6 +112,7 @@ Base: `/api/v1`
 |--------|------|-----------|
 | GET | `/expense-limits` | Listar do tenant (`?month=`, `?year=`) |
 | POST | `/expense-limits` | Criar teto |
+| POST | `/expense-limits/copy` | Copiar tetos de um mês para outro |
 | PUT | `/expense-limits/:id` | Atualizar teto |
 | DELETE | `/expense-limits/:id` | Excluir teto |
 
@@ -188,3 +189,4 @@ Executadas automaticamente pelo `SchemaManager` para cada tenant ativo no startu
 | `ErrCyclicCategory` | 400 |
 | `ErrInvalidPassword` | 400 |
 | `ErrInvalidRole` | 400 |
+| `ErrSameMonth` | 400 |

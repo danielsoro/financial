@@ -61,6 +61,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	limits := protected.Group("/expense-limits")
 	limits.GET("", h.ExpenseLimit.List)
 	limits.POST("", h.ExpenseLimit.Create)
+	limits.POST("/copy", h.ExpenseLimit.Copy)
 	limits.PUT("/:id", h.ExpenseLimit.Update)
 	limits.DELETE("/:id", h.ExpenseLimit.Delete)
 

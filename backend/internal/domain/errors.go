@@ -15,4 +15,5 @@ var (
 	ErrTenantNotFound    = errors.New("tenant not found")
 	ErrDuplicateDomain   = errors.New("domain already in use")
 	ErrInvalidRole       = errors.New("invalid role")
+	ErrSameMonth         = errors.New("source and target month must be different")
 )

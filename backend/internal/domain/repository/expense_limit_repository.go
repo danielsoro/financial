@@ -13,5 +13,5 @@ type ExpenseLimitRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.ExpenseLimit, error)
 	FindAll(ctx context.Context, month, year int) ([]entity.ExpenseLimit, error)
-	GetLimitsProgress(ctx context.Context, month, year int) ([]entity.LimitProgress, error)
+	GetLimitsProgress(ctx context.Context, month, year int, userID *uuid.UUID) ([]entity.LimitProgress, error)
 }

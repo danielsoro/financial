@@ -96,7 +96,7 @@ src/
 | `authService` | login, getProfile, updateProfile, changePassword, getSubdomain |
 | `categoryService` | list, create, update, delete |
 | `transactionService` | list, getById, create, update, delete |
-| `expenseLimitService` | list, create, update, delete |
+| `expenseLimitService` | list, create, update, delete, copy |
 | `dashboardService` | summary, byCategory, limitsProgress |
 | `adminService` | listUsers, createUser, updateUser, deleteUser, resetPassword |
 

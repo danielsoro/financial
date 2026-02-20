@@ -70,7 +70,7 @@ finance/
 - Profile: `GET/PUT /profile`, `POST /profile/change-password`
 - Categories: `GET/POST /categories`, `PUT/DELETE /categories/:id`
 - Transactions: `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id`
-- Expense Limits: `GET/POST /expense-limits`, `PUT/DELETE /expense-limits/:id`
+- Expense Limits: `GET/POST /expense-limits`, `POST /expense-limits/copy`, `PUT/DELETE /expense-limits/:id`
 - Dashboard: `GET /dashboard/summary`, `/dashboard/by-category`, `/dashboard/limits-progress`
 
 ### Admin (role: admin)

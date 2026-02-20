@@ -13,4 +13,7 @@ export const expenseLimitService = {
 
   delete: (id: string) =>
     api.delete(`/expense-limits/${id}`),
+
+  copy: (data: { from_month: number; from_year: number; to_month: number; to_year: number }) =>
+    api.post<{ copied: number }>('/expense-limits/copy', data),
 };

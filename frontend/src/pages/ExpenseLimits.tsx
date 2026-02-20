@@ -9,7 +9,7 @@ import Modal from "../components/ui/Modal";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import Autocomplete from "../components/ui/Autocomplete";
 import toast from "react-hot-toast";
-import { HiPlus, HiPencil, HiTrash } from "react-icons/hi2";
+import { HiPlus, HiPencil, HiTrash, HiDocumentDuplicate } from "react-icons/hi2";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -24,6 +24,10 @@ export default function ExpenseLimits() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ExpenseLimit | null>(null);
   const [deleting, setDeleting] = useState<ExpenseLimit | null>(null);
+
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [toMonth, setToMonth] = useState(month === 12 ? 1 : month + 1);
+  const [toYear, setToYear] = useState(month === 12 ? year + 1 : year);
 
   const [categoryId, setCategoryId] = useState<string>("");
   const [amount, setAmount] = useState("");
@@ -78,6 +82,31 @@ export default function ExpenseLimits() {
       toast.error(err.response?.data?.error || "Erro ao excluir"),
   });
 
+  const copyMutation = useMutation({
+    mutationFn: () =>
+      expenseLimitService.copy({
+        from_month: month,
+        from_year: year,
+        to_month: toMonth,
+        to_year: toYear,
+      }),
+    onSuccess: (res) => {
+      invalidateAll();
+      setCopyModalOpen(false);
+      toast.success(`${res.data.copied} teto(s) copiado(s)`);
+    },
+    onError: (err: AxiosError<{ error: string }>) =>
+      toast.error(err.response?.data?.error || "Erro ao copiar"),
+  });
+
+  const openCopy = () => {
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    setToMonth(nextMonth);
+    setToYear(nextYear);
+    setCopyModalOpen(true);
+  };
+
   const openCreate = () => {
     setEditing(null);
     setCategoryId("");
@@ -114,12 +143,22 @@ export default function ExpenseLimits() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Tetos de Gastos</h1>
-        <button
-          onClick={openCreate}
-          className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-        >
-          <HiPlus className="w-5 h-5" /> Novo Teto
-        </button>
+        <div className="hidden md:flex items-center gap-2">
+          {limits.length > 0 && (
+            <button
+              onClick={openCopy}
+              className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+            >
+              <HiDocumentDuplicate className="w-5 h-5" /> Copiar para...
+            </button>
+          )}
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            <HiPlus className="w-5 h-5" /> Novo Teto
+          </button>
+        </div>
       </div>
 
       {/* FAB mobile */}
@@ -141,6 +180,17 @@ export default function ExpenseLimits() {
           }}
         />
       </div>
+
+      {!isLoading && limits.length > 0 && (
+        <div className="md:hidden mb-4">
+          <button
+            onClick={openCopy}
+            className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            <HiDocumentDuplicate className="w-5 h-5" /> Copiar para...
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-gray-500">Carregando...</p>
@@ -245,6 +295,40 @@ export default function ExpenseLimits() {
         title="Excluir Teto"
         message="Tem certeza que deseja excluir este teto?"
       />
+
+      <Modal
+        isOpen={copyModalOpen}
+        onClose={() => setCopyModalOpen(false)}
+        title="Copiar Tetos para..."
+      >
+        <div className="space-y-4">
+          <MonthSelector
+            month={toMonth}
+            year={toYear}
+            onChange={(m, y) => {
+              setToMonth(m);
+              setToYear(y);
+            }}
+          />
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setCopyModalOpen(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => copyMutation.mutate()}
+              disabled={copyMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Copiar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
