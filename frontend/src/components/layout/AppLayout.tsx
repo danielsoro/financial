@@ -64,7 +64,7 @@ export default function AppLayout() {
         >
           <HiBars3 className="h-6 w-6" />
         </button>
-        <img src="/logo.svg" alt="DNA Fami" className="ml-3 h-6 w-6" />
+        <img src="/assets/logo.svg" alt="DNA Fami" className="ml-3 h-6 w-6" />
         <h1 className="ml-2 text-lg font-bold text-gray-900">DNA Fami</h1>
       </div>
 
@@ -86,7 +86,7 @@ export default function AppLayout() {
         {/* Logo + Collapse toggle */}
         <div className={`py-6 flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="DNA Fami" className={`transition-all duration-300 ${collapsed ? 'h-7 w-7' : 'h-8 w-8'}`} />
+            <img src="/assets/logo.svg" alt="DNA Fami" className={`transition-all duration-300 ${collapsed ? 'h-7 w-7' : 'h-8 w-8'}`} />
             {!collapsed && (
               <h1
                 onClick={() => setCollapsed(true)}
@@ -105,7 +105,7 @@ export default function AppLayout() {
           {/* Mobile: keep showing logo text since collapse isn't used on mobile */}
           {collapsed && (
             <div className="flex items-center gap-2 md:hidden">
-              <img src="/logo.svg" alt="DNA Fami" className="h-7 w-7" />
+              <img src="/assets/logo.svg" alt="DNA Fami" className="h-7 w-7" />
               <h1 className="font-bold tracking-tight text-lg">DNA Fami</h1>
             </div>
           )}
