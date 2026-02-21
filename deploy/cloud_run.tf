@@ -90,6 +90,11 @@ resource "google_cloud_run_v2_service" "finance" {
         value = var.email_from
       }
 
+      env {
+        name  = "GIN_MODE"
+        value = "release"
+      }
+
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"

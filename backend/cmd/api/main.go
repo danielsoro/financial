@@ -89,6 +89,7 @@ func main() {
 
 	// Router
 	r := gin.Default()
+	r.TrustedPlatform = gin.PlatformCloudflare
 	router.Setup(r, cfg.JWTSecret, cfg.StaticDir, cfg.AllowedOrigin, pool, tenantCache, handlers)
 
 	log.Printf("Server starting on :%s", cfg.Port)
