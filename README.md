@@ -51,7 +51,7 @@ finance/
 │   ├── internal/
 │   │   ├── config/          # Variaveis de ambiente
 │   │   ├── domain/
-│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit)
+│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit, RecurringTransaction)
 │   │   │   ├── repository/  # Interfaces dos repositorios
 │   │   │   ├── usecase/     # Casos de uso
 │   │   │   └── errors.go    # Erros de dominio
@@ -59,12 +59,12 @@ finance/
 │   │       ├── database/    # Implementacao PostgreSQL (pgx), SchemaManager, TenantCache
 │   │       └── http/        # Handlers, middleware, router (Gin)
 │   ├── migrations/          # Public migrations (tabela tenants)
-│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits)
+│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits, recurring_transactions)
 ├── frontend/
 │   └── src/
-│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, Profile, Users
+│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
 │       ├── components/      # Layout, auth, UI reutilizaveis
-│       ├── services/        # Clientes da API
+│       ├── services/        # Clientes da API (auth, categories, transactions, dashboard, expense-limits, recurring-transactions, admin)
 │       ├── contexts/        # AuthContext
 │       └── types/           # Interfaces TypeScript
 ├── deploy/                  # Terraform (Cloud Run, Cloud SQL, IAM, Secrets, Cloudflare DNS)
@@ -86,6 +86,7 @@ Base: `/api/v1`
 | Categories | `GET/POST /categories`, `PUT/DELETE /categories/:id` |
 | Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` |
 | Expense Limits | `GET/POST /expense-limits`, `POST /expense-limits/copy`, `PUT/DELETE /expense-limits/:id` |
+| Recurring Transactions | `GET/POST /recurring-transactions`, `DELETE /recurring-transactions/:id`, `POST /recurring-transactions/:id/pause`, `POST /recurring-transactions/:id/resume` |
 | Dashboard | `GET /dashboard/summary`, `/by-category`, `/limits-progress` |
 | Admin | `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password` |
 

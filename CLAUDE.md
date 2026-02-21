@@ -41,19 +41,19 @@ finance/
 │   │   ├── config/          # Variáveis de ambiente
 │   │   ├── tenant/          # Context helpers (ContextWithSchema, SchemaFromContext)
 │   │   ├── domain/
-│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit)
+│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit, RecurringTransaction)
 │   │   │   ├── repository/  # Interfaces dos repositórios
-│   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
+│   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, recurring_transaction, dashboard)
 │   │   └── infrastructure/
 │   │       ├── database/    # Implementação PostgreSQL (pgx), SchemaManager, TenantCache, ConnFromContext
 │   │       └── http/        # Handlers, middleware (auth, cors, role, schema), router (Gin)
 │   ├── migrations/          # Public migrations (tabela tenants)
-│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits)
+│   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits, recurring_transactions)
 ├── frontend/         # React SPA
 │   └── src/
-│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, Profile, Users
+│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
 │       ├── components/      # Layout, auth (ProtectedRoute, AdminRoute), UI
-│       ├── services/        # API (auth, categories, transactions, dashboard, expense-limits, admin)
+│       ├── services/        # API (auth, categories, transactions, dashboard, expense-limits, recurring-transactions, admin)
 │       ├── contexts/        # AuthContext
 │       └── types/           # TypeScript interfaces
 ├── deploy/           # Terraform (Cloud Run, Cloud SQL, IAM, Secrets, Cloudflare DNS)
@@ -73,6 +73,7 @@ finance/
 - Categories: `GET/POST /categories`, `PUT/DELETE /categories/:id`
 - Transactions: `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id`
 - Expense Limits: `GET/POST /expense-limits`, `POST /expense-limits/copy`, `PUT/DELETE /expense-limits/:id`
+- Recurring Transactions: `GET/POST /recurring-transactions`, `DELETE /recurring-transactions/:id`, `POST /recurring-transactions/:id/pause`, `POST /recurring-transactions/:id/resume`
 - Dashboard: `GET /dashboard/summary`, `/dashboard/by-category`, `/dashboard/limits-progress`
 
 ### Admin (role: admin)

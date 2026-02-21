@@ -54,6 +54,7 @@ export interface Transaction {
   amount: number;
   description: string;
   date: string;
+  recurring_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,4 +108,34 @@ export interface CategoryTotal {
   category_id: string;
   category_name: string;
   total: number;
+}
+
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
+export interface RecurringTransaction {
+  id: string;
+  user_id: string;
+  category_id: string;
+  category_name?: string;
+  type: 'income' | 'expense';
+  amount: number;
+  description: string;
+  frequency: RecurrenceFrequency;
+  start_date: string;
+  end_date: string | null;
+  max_occurrences: number | null;
+  day_of_month: number | null;
+  is_active: boolean;
+  paused_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RecurringDeleteMode = 'all' | 'future_and_current' | 'future_only';
+
+export interface RecurringTransactionFilter {
+  type?: string;
+  is_active?: boolean;
+  page?: number;
+  per_page?: number;
 }

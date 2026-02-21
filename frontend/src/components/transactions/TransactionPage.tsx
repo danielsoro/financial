@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { transactionService } from '../../services/transactions';
 import { categoryService } from '../../services/categories';
-import type { Transaction, TransactionFilter } from '../../types';
+import { recurringTransactionService } from '../../services/recurring-transactions';
+import type { Transaction, TransactionFilter, RecurrenceFrequency } from '../../types';
 import Modal from '../ui/Modal';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import Pagination from '../ui/Pagination';
@@ -57,6 +58,13 @@ export default function TransactionPage({ type, title }: Props) {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Recurring fields
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
+  const [endCondition, setEndCondition] = useState<'indefinite' | 'end_date' | 'max_occurrences'>('indefinite');
+  const [endDate, setEndDate] = useState('');
+  const [maxOccurrences, setMaxOccurrences] = useState('');
+
   const { data: result, isLoading } = useQuery({
     queryKey: ['transactions', filter],
     queryFn: () => transactionService.list(filter).then((r) => r.data),
@@ -86,6 +94,27 @@ export default function TransactionPage({ type, title }: Props) {
     onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao criar'),
   });
 
+  const createRecurringMutation = useMutation({
+    mutationFn: (data: {
+      type: 'income' | 'expense';
+      category_id: string;
+      amount: number;
+      description: string;
+      frequency: RecurrenceFrequency;
+      start_date: string;
+      end_date: string | null;
+      max_occurrences: number | null;
+      day_of_month: number | null;
+    }) => recurringTransactionService.create(data),
+    onSuccess: () => {
+      invalidateAll();
+      queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] });
+      closeModal();
+      toast.success('Recorrência criada');
+    },
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao criar recorrência'),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: TransactionData }) => transactionService.update(id, data),
     onSuccess: () => {
@@ -112,6 +141,11 @@ export default function TransactionPage({ type, title }: Props) {
     setAmount('');
     setDescription('');
     setDate(new Date().toISOString().split('T')[0]);
+    setIsRecurring(false);
+    setFrequency('monthly');
+    setEndCondition('indefinite');
+    setEndDate('');
+    setMaxOccurrences('');
     setModalOpen(true);
   };
 
@@ -131,17 +165,27 @@ export default function TransactionPage({ type, title }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = {
-      type,
-      category_id: categoryId,
-      amount: parseFloat(amount),
-      description,
-      date,
-    };
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data });
+      updateMutation.mutate({
+        id: editing.id,
+        data: { type, category_id: categoryId, amount: parseFloat(amount), description, date },
+      });
+    } else if (isRecurring) {
+      const startDate = date;
+      const parsedDay = new Date(startDate + 'T00:00:00').getDate();
+      createRecurringMutation.mutate({
+        type,
+        category_id: categoryId,
+        amount: parseFloat(amount),
+        description,
+        frequency,
+        start_date: startDate,
+        end_date: endCondition === 'end_date' ? endDate : null,
+        max_occurrences: endCondition === 'max_occurrences' ? parseInt(maxOccurrences) : null,
+        day_of_month: frequency === 'monthly' || frequency === 'yearly' ? parsedDay : null,
+      });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate({ type, category_id: categoryId, amount: parseFloat(amount), description, date });
     }
   };
 
@@ -331,6 +375,73 @@ export default function TransactionPage({ type, title }: Props) {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          {!editing && (
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Recorrente
+              </label>
+              {isRecurring && (
+                <div className="space-y-3 pl-6 border-l-2 border-blue-200">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Frequência</label>
+                    <select
+                      value={frequency}
+                      onChange={(e) => setFrequency(e.target.value as RecurrenceFrequency)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="weekly">Semanal</option>
+                      <option value="biweekly">Quinzenal</option>
+                      <option value="monthly">Mensal</option>
+                      <option value="yearly">Anual</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Condição de término</label>
+                    <select
+                      value={endCondition}
+                      onChange={(e) => setEndCondition(e.target.value as 'indefinite' | 'end_date' | 'max_occurrences')}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="indefinite">Indefinido</option>
+                      <option value="end_date">Data final</option>
+                      <option value="max_occurrences">Número de parcelas</option>
+                    </select>
+                  </div>
+                  {endCondition === 'end_date' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
+                  {endCondition === 'max_occurrences' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Número de parcelas</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={maxOccurrences}
+                        onChange={(e) => setMaxOccurrences(e.target.value)}
+                        required
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-3">
             <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
               Cancelar

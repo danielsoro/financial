@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/dcunha/finance/backend/internal/domain"
 	"github.com/dcunha/finance/backend/internal/domain/entity"
@@ -25,15 +26,94 @@ func (r *TransactionRepo) Create(ctx context.Context, tx *entity.Transaction) er
 	}
 
 	err = conn.QueryRow(ctx,
-		`INSERT INTO transactions (user_id, category_id, type, amount, description, date)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO transactions (user_id, category_id, type, amount, description, date, recurring_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 RETURNING id, created_at, updated_at`,
-		tx.UserID, tx.CategoryID, tx.Type, tx.Amount, tx.Description, tx.Date,
+		tx.UserID, tx.CategoryID, tx.Type, tx.Amount, tx.Description, tx.Date, tx.RecurringID,
 	).Scan(&tx.ID, &tx.CreatedAt, &tx.UpdatedAt)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (r *TransactionRepo) BulkCreate(ctx context.Context, txs []entity.Transaction) error {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	batch := &pgx.Batch{}
+	for i := range txs {
+		batch.Queue(
+			`INSERT INTO transactions (user_id, category_id, type, amount, description, date, recurring_id)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			txs[i].UserID, txs[i].CategoryID, txs[i].Type, txs[i].Amount, txs[i].Description, txs[i].Date, txs[i].RecurringID,
+		)
+	}
+
+	br := conn.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range txs {
+		if _, err := br.Exec(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *TransactionRepo) DeleteByRecurringID(ctx context.Context, recurringID uuid.UUID, mode entity.DeleteMode) error {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	var query string
+
+	switch mode {
+	case entity.DeleteModeAll:
+		query = `DELETE FROM transactions WHERE recurring_id = $1`
+		_, err = conn.Exec(ctx, query, recurringID)
+	case entity.DeleteModeFutureAndCurrent:
+		firstDayOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+		query = `DELETE FROM transactions WHERE recurring_id = $1 AND date >= $2`
+		_, err = conn.Exec(ctx, query, recurringID, firstDayOfMonth)
+	case entity.DeleteModeFutureOnly:
+		firstDayNextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+		query = `DELETE FROM transactions WHERE recurring_id = $1 AND date >= $2`
+		_, err = conn.Exec(ctx, query, recurringID, firstDayNextMonth)
+	}
+	return err
+}
+
+func (r *TransactionRepo) DeleteFutureByRecurringID(ctx context.Context, recurringID uuid.UUID, fromDate string) error {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Exec(ctx,
+		`DELETE FROM transactions WHERE recurring_id = $1 AND date >= $2`,
+		recurringID, fromDate)
+	return err
+}
+
+func (r *TransactionRepo) CountByRecurringID(ctx context.Context, recurringID uuid.UUID) (int, error) {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = conn.QueryRow(ctx,
+		`SELECT COUNT(*) FROM transactions WHERE recurring_id = $1`, recurringID,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) error {
@@ -83,12 +163,12 @@ func (r *TransactionRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.T
 	var tx entity.Transaction
 	err = conn.QueryRow(ctx,
 		`SELECT t.id, t.user_id, t.category_id, c.name AS category_name,
-		        t.type, t.amount, t.description, t.date::text, t.created_at, t.updated_at
+		        t.type, t.amount, t.description, t.date::text, t.recurring_id, t.created_at, t.updated_at
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
 		 WHERE t.id = $1`, id,
 	).Scan(&tx.ID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
-		&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.CreatedAt, &tx.UpdatedAt)
+		&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.RecurringID, &tx.CreatedAt, &tx.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -150,7 +230,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	offset := (filter.Page - 1) * filter.PerPage
 	dataQuery := fmt.Sprintf(
 		`SELECT t.id, t.user_id, t.category_id, c.name AS category_name,
-		        t.type, t.amount, t.description, t.date::text, t.created_at, t.updated_at
+		        t.type, t.amount, t.description, t.date::text, t.recurring_id, t.created_at, t.updated_at
 		 FROM transactions t
 		 JOIN categories c ON t.category_id = c.id
 		 %s
@@ -170,7 +250,7 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 	for rows.Next() {
 		var tx entity.Transaction
 		if err := rows.Scan(&tx.ID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
-			&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.CreatedAt, &tx.UpdatedAt); err != nil {
+			&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.RecurringID, &tx.CreatedAt, &tx.UpdatedAt); err != nil {
 			return nil, err
 		}
 		transactions = append(transactions, tx)
