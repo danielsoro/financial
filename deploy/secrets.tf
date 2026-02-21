@@ -43,7 +43,9 @@ resource "google_secret_manager_secret_iam_member" "db_password_access" {
 
 resource "google_secret_manager_secret" "sendgrid_api_key" {
   secret_id = "finance-sendgrid-api-key"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
   depends_on = [google_project_service.apis]
 }
 
