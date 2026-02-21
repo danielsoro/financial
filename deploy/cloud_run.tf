@@ -71,6 +71,11 @@ resource "google_cloud_run_v2_service" "finance" {
       }
 
       env {
+        name  = "APP_URL"
+        value = "https://${var.domain}"
+      }
+
+      env {
         name = "SENDGRID_API_KEY"
         value_source {
           secret_key_ref {
