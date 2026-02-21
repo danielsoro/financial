@@ -28,6 +28,11 @@ output "domain" {
 }
 
 output "root_url" {
+  value       = "https://app.${var.domain}"
+  description = "Finance app URL"
+}
+
+output "landing_url" {
   value       = "https://${var.domain}"
-  description = "Root tenant URL"
+  description = "Landing page URL"
 }

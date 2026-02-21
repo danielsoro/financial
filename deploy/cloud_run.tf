@@ -67,12 +67,12 @@ resource "google_cloud_run_v2_service" "finance" {
 
       env {
         name  = "ALLOWED_ORIGIN"
-        value = var.domain
+        value = "app.${var.domain}"
       }
 
       env {
         name  = "APP_URL"
-        value = "https://${var.domain}"
+        value = "https://app.${var.domain}"
       }
 
       env {
