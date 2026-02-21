@@ -1,6 +1,12 @@
-# Finance
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="DNA Fami" width="64" height="64" />
+</p>
 
-App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e despesas, organizar por categorias hierarquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados sao isolados por tenant (subdominio).
+<h1 align="center">DNA Fami</h1>
+
+<p align="center">
+  App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e despesas, organizar por categorias hierarquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados sao isolados por tenant (subdominio).
+</p>
 
 ## Tech Stack
 
