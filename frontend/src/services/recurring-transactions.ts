@@ -1,5 +1,5 @@
 import api from './api';
-import type { RecurringTransaction, RecurringTransactionFilter, RecurringDeleteMode, PaginatedResponse } from '../types';
+import type { RecurringTransaction, RecurringTransactionFilter, RecurringDeleteMode, ResumeConflictStrategy, PaginatedResponse } from '../types';
 
 export const recurringTransactionService = {
   list: (filter: RecurringTransactionFilter) =>
@@ -14,6 +14,6 @@ export const recurringTransactionService = {
   pause: (id: string) =>
     api.post(`/recurring-transactions/${id}/pause`),
 
-  resume: (id: string) =>
-    api.post(`/recurring-transactions/${id}/resume`),
+  resume: (id: string, onConflict?: ResumeConflictStrategy) =>
+    api.post(`/recurring-transactions/${id}/resume`, onConflict ? { on_conflict: onConflict } : undefined),
 };

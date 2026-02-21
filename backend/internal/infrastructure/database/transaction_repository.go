@@ -116,6 +116,22 @@ func (r *TransactionRepo) CountByRecurringID(ctx context.Context, recurringID uu
 	return count, nil
 }
 
+func (r *TransactionRepo) CountByRecurringIDBeforeDate(ctx context.Context, recurringID uuid.UUID, beforeDate string) (int, error) {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = conn.QueryRow(ctx,
+		`SELECT COUNT(*) FROM transactions WHERE recurring_id = $1 AND date < $2`, recurringID, beforeDate,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) error {
 	conn, err := ConnFromContext(ctx)
 	if err != nil {
@@ -271,6 +287,69 @@ func (r *TransactionRepo) FindAll(ctx context.Context, filter entity.Transaction
 		PerPage:    filter.PerPage,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func (r *TransactionRepo) FindByRecurringIDAndDateRange(ctx context.Context, recurringID uuid.UUID, fromDate, toDate string) ([]entity.Transaction, error) {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := conn.Query(ctx,
+		`SELECT t.id, t.user_id, t.category_id, c.name AS category_name,
+		        t.type, t.amount, t.description, t.date::text, t.recurring_id, t.created_at, t.updated_at
+		 FROM transactions t
+		 JOIN categories c ON t.category_id = c.id
+		 WHERE t.recurring_id = $1 AND t.date >= $2 AND t.date <= $3
+		 ORDER BY t.date`, recurringID, fromDate, toDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var txs []entity.Transaction
+	for rows.Next() {
+		var tx entity.Transaction
+		if err := rows.Scan(&tx.ID, &tx.UserID, &tx.CategoryID, &tx.CategoryName,
+			&tx.Type, &tx.Amount, &tx.Description, &tx.Date, &tx.RecurringID, &tx.CreatedAt, &tx.UpdatedAt); err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if txs == nil {
+		txs = []entity.Transaction{}
+	}
+	return txs, nil
+}
+
+func (r *TransactionRepo) BulkUpdate(ctx context.Context, txs []entity.Transaction) error {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	batch := &pgx.Batch{}
+	for i := range txs {
+		batch.Queue(
+			`UPDATE transactions
+			 SET type = $1, amount = $2, description = $3, category_id = $4, updated_at = NOW()
+			 WHERE id = $5`,
+			txs[i].Type, txs[i].Amount, txs[i].Description, txs[i].CategoryID, txs[i].ID,
+		)
+	}
+
+	br := conn.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range txs {
+		if _, err := br.Exec(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *TransactionRepo) GetSummary(ctx context.Context, month, year int, userID *uuid.UUID) (*entity.DashboardSummary, error) {
