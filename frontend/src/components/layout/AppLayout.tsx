@@ -7,6 +7,7 @@ import {
   HiArrowTrendingDown,
   HiTag,
   HiShieldCheck,
+  HiArrowPath,
   HiArrowRightOnRectangle,
   HiPencilSquare,
   HiUserGroup,
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/expenses', label: 'Despesas', icon: HiArrowTrendingDown },
   { to: '/categories', label: 'Categorias', icon: HiTag },
   { to: '/expense-limits', label: 'Tetos de Gastos', icon: HiShieldCheck },
+  { to: '/recurring', label: 'Recorrências', icon: HiArrowPath },
 ];
 
 export default function AppLayout() {

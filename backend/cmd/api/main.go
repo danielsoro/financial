@@ -50,6 +50,7 @@ func main() {
 	categoryRepo := database.NewCategoryRepo()
 	transactionRepo := database.NewTransactionRepo()
 	expenseLimitRepo := database.NewExpenseLimitRepo()
+	recurringRepo := database.NewRecurringTransactionRepo()
 
 	// Usecases
 	healthUc := usecase.NewHealthUsecase(pool)
@@ -59,6 +60,7 @@ func main() {
 	transactionUC := usecase.NewTransactionUsecase(transactionRepo)
 	expenseLimitUC := usecase.NewExpenseLimitUsecase(expenseLimitRepo)
 	dashboardUC := usecase.NewDashboardUsecase(transactionRepo, expenseLimitRepo)
+	recurringUC := usecase.NewRecurringTransactionUsecase(recurringRepo, transactionRepo)
 
 	// Handlers
 	handlers := router.Handlers{
@@ -69,6 +71,7 @@ func main() {
 		Transaction:  handler.NewTransactionHandler(transactionUC),
 		ExpenseLimit: handler.NewExpenseLimitHandler(expenseLimitUC),
 		Dashboard:    handler.NewDashboardHandler(dashboardUC),
+		Recurring:    handler.NewRecurringTransactionHandler(recurringUC),
 	}
 
 	// Router

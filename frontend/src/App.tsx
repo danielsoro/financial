@@ -11,6 +11,7 @@ import Income from './pages/Income';
 import Expense from './pages/Expense';
 import Categories from './pages/Categories';
 import ExpenseLimits from './pages/ExpenseLimits';
+import RecurringTransactions from './pages/RecurringTransactions';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
 
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="expenses" element={<Expense />} />
               <Route path="categories" element={<Categories />} />
               <Route path="expense-limits" element={<ExpenseLimits />} />
+              <Route path="recurring" element={<RecurringTransactions />} />
               <Route path="profile" element={<Profile />} />
               <Route
                 path="admin/users"

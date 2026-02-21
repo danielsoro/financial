@@ -19,6 +19,7 @@ type Handlers struct {
 	ExpenseLimit *handler.ExpenseLimitHandler
 	Dashboard    *handler.DashboardHandler
 	Admin        *handler.AdminHandler
+	Recurring    *handler.RecurringTransactionHandler
 }
 
 func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin string, pool *pgxpool.Pool, tenantCache *database.TenantCache, h Handlers) {
@@ -64,6 +65,14 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	limits.POST("/copy", h.ExpenseLimit.Copy)
 	limits.PUT("/:id", h.ExpenseLimit.Update)
 	limits.DELETE("/:id", h.ExpenseLimit.Delete)
+
+	// Recurring Transactions
+	recurring := protected.Group("/recurring-transactions")
+	recurring.GET("", h.Recurring.List)
+	recurring.POST("", h.Recurring.Create)
+	recurring.DELETE("/:id", h.Recurring.Delete)
+	recurring.POST("/:id/pause", h.Recurring.Pause)
+	recurring.POST("/:id/resume", h.Recurring.Resume)
 
 	// Dashboard
 	dash := protected.Group("/dashboard")
