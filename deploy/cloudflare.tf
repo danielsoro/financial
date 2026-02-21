@@ -12,11 +12,6 @@ locals {
   zone_id = data.cloudflare_zones.domain.zones[0].id
 }
 
-moved {
-  from = cloudflare_record.root
-  to   = cloudflare_record.app
-}
-
 resource "cloudflare_record" "app" {
   zone_id = local.zone_id
   name    = "app"
