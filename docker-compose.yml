@@ -23,7 +23,9 @@ services:
       DATABASE_URL: postgres://finance:finance123@postgres:5432/finance?sslmode=disable
       JWT_SECRET: super-secret-key-change-in-production
       PORT: "8080"
-      TENANTS: root,test
+      APP_URL: http://localhost:3000
+      SENDGRID_API_KEY: ""
+      EMAIL_FROM: noreply@dnafami.com.br
     ports:
       - "8080:8080"
     depends_on:

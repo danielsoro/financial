@@ -22,9 +22,9 @@ func NewTenantRepo(pool *pgxpool.Pool) *TenantRepo {
 
 func (r *TenantRepo) Create(ctx context.Context, tenant *entity.Tenant) error {
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO tenants (name, domain, schema_name, is_active) VALUES ($1, $2, $3, $4)
+		`INSERT INTO tenants (name, domain, schema_name, is_active, owner_id) VALUES ($1, $2, $3, $4, $5)
 		 RETURNING id, created_at, updated_at`,
-		tenant.Name, tenant.Domain, tenant.SchemaName, tenant.IsActive,
+		tenant.Name, tenant.Domain, tenant.SchemaName, tenant.IsActive, tenant.OwnerID,
 	).Scan(&tenant.ID, &tenant.CreatedAt, &tenant.UpdatedAt)
 	if err != nil {
 		if isDuplicateKey(err) {
@@ -37,10 +37,10 @@ func (r *TenantRepo) Create(ctx context.Context, tenant *entity.Tenant) error {
 
 func (r *TenantRepo) Update(ctx context.Context, tenant *entity.Tenant) error {
 	err := r.pool.QueryRow(ctx,
-		`UPDATE tenants SET name = $1, domain = $2, schema_name = $3, is_active = $4, updated_at = NOW()
-		 WHERE id = $5
+		`UPDATE tenants SET name = $1, domain = $2, schema_name = $3, is_active = $4, owner_id = $5, updated_at = NOW()
+		 WHERE id = $6
 		 RETURNING updated_at`,
-		tenant.Name, tenant.Domain, tenant.SchemaName, tenant.IsActive, tenant.ID,
+		tenant.Name, tenant.Domain, tenant.SchemaName, tenant.IsActive, tenant.OwnerID, tenant.ID,
 	).Scan(&tenant.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -86,8 +86,8 @@ func (r *TenantRepo) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *TenantRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error) {
 	var t entity.Tenant
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, name, domain, schema_name, is_active, created_at, updated_at FROM tenants WHERE id = $1`, id,
-	).Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, name, domain, schema_name, is_active, owner_id, created_at, updated_at FROM tenants WHERE id = $1`, id,
+	).Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.OwnerID, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -97,11 +97,11 @@ func (r *TenantRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Tenant
 	return &t, nil
 }
 
-func (r *TenantRepo) FindByDomain(ctx context.Context, domainStr string) (*entity.Tenant, error) {
+func (r *TenantRepo) FindBySchemaName(ctx context.Context, schemaName string) (*entity.Tenant, error) {
 	var t entity.Tenant
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, name, domain, schema_name, is_active, created_at, updated_at FROM tenants WHERE domain = $1`, domainStr,
-	).Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, name, domain, schema_name, is_active, owner_id, created_at, updated_at FROM tenants WHERE schema_name = $1`, schemaName,
+	).Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.OwnerID, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrTenantNotFound
@@ -113,7 +113,7 @@ func (r *TenantRepo) FindByDomain(ctx context.Context, domainStr string) (*entit
 
 func (r *TenantRepo) FindAll(ctx context.Context) ([]entity.Tenant, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, name, domain, schema_name, is_active, created_at, updated_at FROM tenants ORDER BY created_at ASC`,
+		`SELECT id, name, domain, schema_name, is_active, owner_id, created_at, updated_at FROM tenants ORDER BY created_at ASC`,
 	)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (r *TenantRepo) FindAll(ctx context.Context) ([]entity.Tenant, error) {
 	var tenants []entity.Tenant
 	for rows.Next() {
 		var t entity.Tenant
-		if err := rows.Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Domain, &t.SchemaName, &t.IsActive, &t.OwnerID, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		tenants = append(tenants, t)

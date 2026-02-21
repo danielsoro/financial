@@ -22,15 +22,16 @@ internal/
 ├── config/              → Configuração (env vars)
 ├── tenant/              → Context helpers (ContextWithSchema, SchemaFromContext)
 ├── domain/              → Regras de negócio (sem dependências externas)
-│   ├── entity/          → Entidades de domínio (User, Tenant, Category, Transaction, ExpenseLimit)
+│   ├── entity/          → Entidades de domínio (User, Tenant, GlobalUser, Membership, Invite, Category, Transaction, ExpenseLimit, RecurringTransaction)
 │   ├── repository/      → Interfaces dos repositórios
-│   ├── usecase/         → Casos de uso (auth, admin, category, transaction, expense_limit, dashboard)
+│   ├── usecase/         → Casos de uso (auth, registration, invite, admin, category, transaction, expense_limit, recurring_transaction, dashboard)
 │   └── errors.go        → Erros de domínio
 └── infrastructure/      → Implementações concretas
     ├── database/        → Repositórios PostgreSQL, SchemaManager, TenantCache, AcquireWithSchema
+    ├── email/           → Email sender (SendGrid API + LogSender para dev) + templates HTML
     └── http/
-        ├── handler/     → HTTP handlers (auth, admin, category, transaction, expense_limit, dashboard)
-        ├── middleware/   → Auth JWT (com schema injection), CORS, Role (RequireAdmin)
+        ├── handler/     → HTTP handlers (auth, registration, invite, admin, category, transaction, expense_limit, recurring_transaction, dashboard)
+        ├── middleware/   → Auth JWT, CORS, Role (RequireAdmin), SchemaConn (SET search_path)
         └── router/      → Configuração de rotas
 ```
 
@@ -39,23 +40,41 @@ HTTP Request → Router → Middleware (CORS → Auth [JWT + TenantCache → sch
 
 ## Multi-Tenancy
 
-- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
-- **Tenant** é identificado por subdomínio (enviado no login). `localhost` → tenant `root`
-- **Tabela `tenants`** no schema `public` como registro central
-- **Isolamento:** cada request autenticada resolve o tenant via JWT → TenantCache → `SET search_path`
-- **JWT claims:** `sub` (user_id), `tenant_id`, `role`
-- **Startup:** `RunMigrations` → `EnsureTenantsFromEnv` → `SchemaManager.InitAllTenants` → `TenantCache.Load`
-- **Novo tenant:** adicionar ao env `TENANTS` → app cria schema + migrations + seed admin no startup
-- **2 roles:** `admin` (gerencia usuários do tenant), `user`
-- **Admin padrão:** `admin@admin.com` / `admin123` (seed automático por schema)
+- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_minha_familia`)
+- **Global users:** tabela `public.global_users` para autenticação centralizada (email/senha + verificação de email)
+- **Per-schema users:** tabela `{schema}.users` com FK para `global_user_id` — mantém FKs de transações intactas
+- **Memberships:** tabela `public.memberships` vincula global_user → tenant (permite multi-tenant por usuário)
+- **Tabela `tenants`** no schema `public` como registro central (com `owner_id` referenciando global_user)
+- **Isolamento:** middleware `SchemaConn` configura `SET search_path` por request via `ConnFromContext`
+- **JWT claims:** `sub` (per-schema user_id), `tenant_id`, `global_user_id`, `role`
+- **Startup:** `RunMigrations` → `SchemaManager.InitAllTenants` → `TenantCache.Load`
+- **Novo tenant:** criado via self-registration (`POST /auth/register`) — app cria schema + migrations dinamicamente
+- **3 roles:** `owner` (criador, único por tenant, irremovível), `admin`, `user`
+- **Self-registration:** cria conta global + tenant + schema automaticamente
+- **Convites:** admin/owner convida por email → convidado aceita via link (cria conta se necessário)
 
 ## Entidades
 
 ### Tenant
-Organização/empresa. Campos: id, name, domain (unique), schema_name (unique), is_active, timestamps. Armazenado no schema `public`.
+Organização/família. Campos: id, name, domain (unique), schema_name (unique), owner_id (FK global_user), is_active, timestamps. Armazenado no schema `public`.
+
+### GlobalUser
+Usuário global para autenticação centralizada. Campos: id, name, email (unique), password_hash, email_verified, verification_token, timestamps. Armazenado no schema `public`.
+
+### Membership
+Vínculo entre global_user e tenant. Campos: id, global_user_id, tenant_id, role, timestamps. Armazenado no schema `public`.
+
+### TenantMembership (DTO)
+Projeção para seleção de tenant no login: tenant_id, tenant_name, role.
 
 ### User
-Usuário do sistema com role (admin/user), autenticação por email/senha. Armazenado no schema do tenant.
+Usuário do tenant com role (owner/admin/user), global_user_id (FK). Armazenado no schema do tenant.
+
+### Invite
+Convite por email para ingressar em um tenant. Campos: id, tenant_id, email, role, token, invited_by, used, expires_at, timestamps. Armazenado no schema `public`.
+
+### InviteInfo (DTO)
+Projeção pública do convite: tenant_name, email, role, inviter_name.
 
 ### Transaction
 Transação financeira (receita ou despesa) com user_id, valor, descrição, data e categoria. Armazenada no schema do tenant.
@@ -65,6 +84,9 @@ Categoria de transação. Suporta hierarquia (subcategorias via `parent_id`). Ti
 
 ### ExpenseLimit
 Teto de gasto mensal — pode ser global (sem `category_id`) ou por categoria. Armazenado no schema do tenant.
+
+### RecurringTransaction
+Transação recorrente com frequência (monthly/weekly/daily), modo (indefinido/data final/parcelas), pause/resume. Armazenada no schema do tenant.
 
 ### DashboardSummary / CategoryTotal
 Agregações para o dashboard: totais de receita/despesa/saldo e totais por categoria.
@@ -77,7 +99,12 @@ Base: `/api/v1`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| POST | `/auth/login` | Login com email, password, subdomain (retorna JWT) |
+| POST | `/auth/login` | Login global (email, password) → JWT ou selector_token + lista de tenants |
+| POST | `/auth/select-tenant` | Seleciona tenant (selector_token, tenant_id) → JWT |
+| POST | `/auth/register` | Cria conta global + tenant (name, email, password, tenant_name) |
+| POST | `/auth/verify-email` | Verifica email (token) |
+| GET | `/auth/invite-info` | Info do convite (?token=xxx) |
+| POST | `/auth/accept-invite` | Aceita convite (token, name?, password?) |
 
 ### Perfil (autenticado)
 
@@ -124,7 +151,17 @@ Base: `/api/v1`
 | GET | `/dashboard/by-category` | Totais por categoria |
 | GET | `/dashboard/limits-progress` | Progresso dos tetos |
 
-### Admin (role: admin)
+### Recorrências (autenticado)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/recurring-transactions` | Listar recorrências do tenant |
+| POST | `/recurring-transactions` | Criar recorrência |
+| DELETE | `/recurring-transactions/:id` | Excluir recorrência |
+| POST | `/recurring-transactions/:id/pause` | Pausar recorrência |
+| POST | `/recurring-transactions/:id/resume` | Retomar recorrência |
+
+### Admin (role: admin ou owner)
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
@@ -133,6 +170,7 @@ Base: `/api/v1`
 | PUT | `/admin/users/:id` | Atualizar usuário (name, email, role) |
 | DELETE | `/admin/users/:id` | Excluir usuário |
 | POST | `/admin/users/:id/reset-password` | Redefinir senha |
+| POST | `/admin/invite` | Enviar convite por email (email, role) |
 
 ## Configuração
 
@@ -143,8 +181,10 @@ Variáveis de ambiente (arquivo `.env` na raiz do backend):
 | `DATABASE_URL` | Sim | String de conexão PostgreSQL |
 | `JWT_SECRET` | Sim | Chave para assinar tokens JWT |
 | `PORT` | Não | Porta do servidor (padrão: `8080`) |
-| `TENANTS` | Sim | Lista de tenants separados por vírgula (ex: `root,financial`). O app cria schemas no startup |
-| `ALLOWED_ORIGIN` | Não | Domínio para CORS (ex: `dnafami.com.br`). Aceita o domínio e subdomínios (`*.dnafami.com.br`). Se vazio ou `*`, aceita qualquer origin. `localhost` sempre é permitido |
+| `APP_URL` | Não | URL base da aplicação (ex: `https://dnafami.com.br`). Usada em links de emails (verificação, convites) |
+| `ALLOWED_ORIGIN` | Não | Origin para CORS (exact match + localhost). Se vazio ou `*`, aceita qualquer origin |
+| `SENDGRID_API_KEY` | Não | API key do SendGrid. Se vazio, usa `LogSender` (logs no stdout) |
+| `EMAIL_FROM` | Não | Endereço remetente dos emails (ex: `noreply@dnafami.com.br`) |
 
 ## Como rodar
 
@@ -163,6 +203,8 @@ make run         # Roda sem hot-reload
 | Migration | Descrição |
 |-----------|-----------|
 | `001_tenants` | Cria tabela `tenants` no schema `public` (registro central de tenants) |
+| `002_global_users` | Cria tabelas `global_users`, `memberships`, `invites` no schema `public` |
+| `003_tenants_add_owner` | Adiciona coluna `owner_id` na tabela `tenants` (FK para global_users) |
 
 ### Per-tenant (`tenant_migrations/`)
 
@@ -172,6 +214,9 @@ Executadas automaticamente pelo `SchemaManager` para cada tenant ativo no startu
 |-----------|-----------|
 | `001_schema` | Cria tabelas: users, categories (com hierarquia), transactions, expense_limits |
 | `002_seed` | Insere categorias padrão (Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Salário, Freelance, Investimentos, Outros) |
+| `003_recurring_transactions` | Cria tabela recurring_transactions |
+| `004_recurring_redesign` | Redesign da tabela recurring_transactions (adiciona pause/resume, modos de recorrência) |
+| `005_add_global_user_id` | Adiciona coluna `global_user_id` na tabela `users` (FK para global_users) |
 
 ## Erros de domínio
 
@@ -185,8 +230,18 @@ Executadas automaticamente pelo `SchemaManager` para cada tenant ativo no startu
 | `ErrDuplicateCategory` | 409 |
 | `ErrDuplicateLimit` | 409 |
 | `ErrDuplicateDomain` | 409 |
+| `ErrDuplicateTenant` | 409 |
 | `ErrCategoryInUse` | 409 |
+| `ErrAlreadyMember` | 409 |
 | `ErrCyclicCategory` | 400 |
 | `ErrInvalidPassword` | 400 |
 | `ErrInvalidRole` | 400 |
+| `ErrInvalidFrequency` | 400 |
 | `ErrSameMonth` | 400 |
+| `ErrAlreadyPaused` | 400 |
+| `ErrAlreadyActive` | 400 |
+| `ErrEmailNotVerified` | 403 |
+| `ErrMaxTenantsReached` | 400 |
+| `ErrInviteExpired` | 400 |
+| `ErrInviteAlreadyUsed` | 400 |
+| `ErrNoMemberships` | 400 |

@@ -5,15 +5,17 @@ import { adminService } from '../services/admin';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
-import { HiPlus, HiPencil, HiTrash, HiKey } from 'react-icons/hi2';
+import { HiPlus, HiPencil, HiTrash, HiKey, HiEnvelope } from 'react-icons/hi2';
 import type { AdminUser } from '../types';
 
 const roleBadgeColors: Record<string, string> = {
+  owner: 'bg-purple-100 text-purple-800',
   admin: 'bg-blue-100 text-blue-800',
   user: 'bg-gray-100 text-gray-600',
 };
 
 const roleLabels: Record<string, string> = {
+  owner: 'Proprietário',
   admin: 'Admin',
   user: 'Usuário',
 };
@@ -29,6 +31,9 @@ export default function Users() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
   const [newPassword, setNewPassword] = useState('');
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('user');
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -78,6 +83,23 @@ export default function Users() {
     onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao redefinir senha'),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: (data: { email: string; role: string }) =>
+      adminService.inviteUser(data),
+    onSuccess: () => {
+      setInviteOpen(false);
+      setInviteEmail('');
+      setInviteRole('user');
+      toast.success('Convite enviado!');
+    },
+    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao enviar convite'),
+  });
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    inviteMutation.mutate({ email: inviteEmail, role: inviteRole });
+  };
+
   const openCreate = () => {
     setEditing(null);
     setName('');
@@ -121,12 +143,20 @@ export default function Users() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
-        <button
-          onClick={openCreate}
-          className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-        >
-          <HiPlus className="w-5 h-5" /> Novo Usuário
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="hidden md:flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+          >
+            <HiEnvelope className="w-5 h-5" /> Convidar
+          </button>
+          <button
+            onClick={openCreate}
+            className="hidden md:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            <HiPlus className="w-5 h-5" /> Novo Usuário
+          </button>
+        </div>
       </div>
 
       {/* FAB mobile */}
@@ -347,6 +377,53 @@ export default function Users() {
         title="Excluir Usuário"
         message={`Tem certeza que deseja excluir o usuário "${deleting?.name}"? Todos os dados associados serão perdidos.`}
       />
+
+      {/* Invite Modal */}
+      <Modal
+        isOpen={inviteOpen}
+        onClose={() => { setInviteOpen(false); setInviteEmail(''); setInviteRole('user'); }}
+        title="Convidar Usuário"
+      >
+        <form onSubmit={handleInvite} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Envie um convite por email para adicionar alguém ao dashboard.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              required
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="email@exemplo.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Papel</label>
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="user">Usuário</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => { setInviteOpen(false); setInviteEmail(''); setInviteRole('user'); }}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Enviar convite
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

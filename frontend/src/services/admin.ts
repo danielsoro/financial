@@ -14,4 +14,7 @@ export const adminService = {
 
   resetPassword: (id: string, data: { new_password: string }) =>
     api.post(`/admin/users/${id}/reset-password`, data),
+
+  inviteUser: (data: { email: string; role: string }) =>
+    api.post<{ message: string }>('/admin/invite', data),
 };

@@ -23,7 +23,7 @@ func (uc *AdminUsecase) ListUsers(ctx context.Context) ([]entity.AdminUser, erro
 }
 
 func (uc *AdminUsecase) CreateUser(ctx context.Context, name, email, password, role string) (*entity.AdminUser, error) {
-	if role != "admin" && role != "user" {
+	if role != "owner" && role != "admin" && role != "user" {
 		return nil, domain.ErrInvalidRole
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -54,7 +54,7 @@ func (uc *AdminUsecase) UpdateUser(ctx context.Context, id uuid.UUID, name, emai
 	if err != nil {
 		return nil, err
 	}
-	if role != "admin" && role != "user" {
+	if role != "owner" && role != "admin" && role != "user" {
 		return nil, domain.ErrInvalidRole
 	}
 	user.Name = name

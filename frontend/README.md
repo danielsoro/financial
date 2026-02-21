@@ -17,25 +17,30 @@ SPA multi-tenant de finanças em React.
 
 ## Multi-Tenancy
 
-- Tenant é resolvido por **subdomínio** (`financial.localhost` → tenant `financial`)
-- Em `localhost` sem subdomínio, fallback para `financial`
-- Login envia `subdomain` automaticamente
-- Sidebar mostra links de admin condicionais por role
-- `AdminRoute` protege rotas de administração
+- Tenant identificado via **JWT claims** (não por subdomínio)
+- **Login em 2 etapas:** login global → se usuário pertence a múltiplos tenants, exibe seletor → JWT final
+- **Auto-registro:** tela de registro cria conta global + tenant automaticamente
+- **Convites:** tela de aceite de convite para ingressar em tenant existente
+- Sidebar mostra links de admin condicionais por role (admin/owner)
+- `AdminRoute` protege rotas de administração (admin ou owner)
 
 ## Estrutura de diretórios
 
 ```
 src/
 ├── pages/
+│   ├── Login.tsx          # Login global (email/senha) + seletor de tenant
+│   ├── Register.tsx       # Auto-registro (conta + tenant)
+│   ├── VerifyEmail.tsx    # Verificação de email (via token)
+│   ├── AcceptInvite.tsx   # Aceitar convite para tenant
 │   ├── Dashboard.tsx      # Resumo financeiro com gráficos
 │   ├── Income.tsx         # Wrapper → TransactionPage(type="income")
 │   ├── Expense.tsx        # Wrapper → TransactionPage(type="expense")
 │   ├── Categories.tsx     # Gestão de categorias (tree view)
 │   ├── ExpenseLimits.tsx  # Tetos de gasto mensais
+│   ├── RecurringTransactions.tsx  # Transações recorrentes (pause/resume)
 │   ├── Profile.tsx        # Editar perfil e senha
-│   ├── Login.tsx          # Login
-│   └── Users.tsx          # Gestão de usuários (admin)
+│   └── Users.tsx          # Gestão de usuários (admin/owner)
 ├── components/
 │   ├── auth/
 │   │   ├── ProtectedRoute.tsx   # Guard de rota autenticada
@@ -52,16 +57,16 @@ src/
 │       └── Pagination.tsx
 ├── services/
 │   ├── api.ts             # Instância axios, interceptors
-│   ├── auth.ts            # Login, perfil, getSubdomain()
+│   ├── auth.ts            # Login, registro, verificação, convites, seletor de tenant, perfil
 │   ├── categories.ts      # CRUD de categorias
 │   ├── transactions.ts    # CRUD de transações
 │   ├── expense-limits.ts  # CRUD de tetos
 │   ├── dashboard.ts       # Summary, by-category, limits-progress
-│   └── admin.ts           # Gestão de usuários (admin)
+│   └── admin.ts           # Gestão de usuários + convites (admin/owner)
 ├── contexts/
 │   └── AuthContext.tsx     # Estado de auth (token + user com role)
 ├── types/
-│   └── index.ts           # User (com tenant_id, role), Tenant, AdminUser, etc.
+│   └── index.ts           # User, LoginResponse, SelectTenantResponse, TenantInfo, InviteInfo, AdminUser, etc.
 ├── App.tsx                # Router + QueryClient
 ├── main.tsx               # Entrypoint
 └── index.css              # @import "tailwindcss" + overflow-x fix
@@ -71,14 +76,18 @@ src/
 
 | Path | Componente | Descrição | Auth | Role |
 |------|-----------|-----------|:----:|:----:|
-| `/login` | Login | Tela de login | Não | — |
+| `/login` | Login | Login + seletor de tenant | Não | — |
+| `/register` | Register | Criar conta + tenant | Não | — |
+| `/verify-email` | VerifyEmail | Verificar email | Não | — |
+| `/accept-invite` | AcceptInvite | Aceitar convite | Não | — |
 | `/` | Dashboard | Resumo financeiro | Sim | — |
 | `/income` | Income | Tabela de receitas | Sim | — |
 | `/expenses` | Expense | Tabela de despesas | Sim | — |
 | `/categories` | Categories | Gestão de categorias | Sim | — |
 | `/expense-limits` | ExpenseLimits | Tetos de gasto | Sim | — |
+| `/recurring` | RecurringTransactions | Transações recorrentes | Sim | — |
 | `/profile` | Profile | Editar perfil | Sim | — |
-| `/admin/users` | Users | Gestão de usuários | Sim | admin+ |
+| `/admin/users` | Users | Gestão de usuários | Sim | admin/owner |
 
 ## Services (camada de API)
 
@@ -93,12 +102,13 @@ src/
 
 | Service | Endpoints |
 |---------|-----------|
-| `authService` | login, getProfile, updateProfile, changePassword, getSubdomain |
+| `authService` | login, selectTenant, register, verifyEmail, getInviteInfo, acceptInvite, getProfile, updateProfile, changePassword |
 | `categoryService` | list, create, update, delete |
 | `transactionService` | list, getById, create, update, delete |
 | `expenseLimitService` | list, create, update, delete, copy |
+| `recurringTransactionService` | list, create, delete, pause, resume |
 | `dashboardService` | summary, byCategory, limitsProgress |
-| `adminService` | listUsers, createUser, updateUser, deleteUser, resetPassword |
+| `adminService` | listUsers, createUser, updateUser, deleteUser, resetPassword, inviteUser |
 
 ## Guia de estilo
 
@@ -117,7 +127,7 @@ src/
 
 | Role | Classes |
 |------|---------|
-| Super Admin | `bg-purple-100 text-purple-800` |
+| Owner | `bg-purple-100 text-purple-800` |
 | Admin | `bg-blue-100 text-blue-800` |
 | Usuário | `bg-gray-100 text-gray-600` |
 
@@ -143,5 +153,3 @@ npx tsc --noEmit # Type-check
 - **FAB:** botão "Adicionar" vira circular fixo (`fixed bottom-6 right-6`) no mobile
 - **MonthSelector:** tamanho e espaçamento adaptáveis (`min-w-[140px]` mobile, `sm:min-w-[180px]` desktop)
 - **Overflow:** `html, body { overflow-x: hidden }` em `index.css` para evitar scroll horizontal no mobile
-
-Para testar subdomínios em dev, acesse `financial.localhost:5173`.

@@ -5,7 +5,7 @@
 <h1 align="center">DNA Fami</h1>
 
 <p align="center">
-  App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e despesas, organizar por categorias hierarquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados sao isolados por tenant (subdominio).
+  App multi-tenant de gestao de financas pessoais. Permite cadastrar receitas e despesas, organizar por categorias hierarquicas, definir tetos de gastos mensais, criar transacoes recorrentes e visualizar resumos no dashboard. Dados sao isolados por tenant (schema PostgreSQL). Suporta auto-registro, verificacao de email e convites.
 </p>
 
 ## Tech Stack
@@ -38,9 +38,9 @@ make dev
 make frontend
 ```
 
-Acesse `http://financial.localhost:5173`
+Acesse `http://localhost:5173`
 
-Login padrao: `admin@admin.com` / `admin123`
+Crie sua conta pela tela de registro.
 
 ## Estrutura do projeto
 
@@ -51,18 +51,19 @@ finance/
 │   ├── internal/
 │   │   ├── config/          # Variaveis de ambiente
 │   │   ├── domain/
-│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit, RecurringTransaction)
+│   │   │   ├── entity/      # Entidades (User, Tenant, GlobalUser, Membership, Invite, Category, Transaction, ExpenseLimit, RecurringTransaction)
 │   │   │   ├── repository/  # Interfaces dos repositorios
 │   │   │   ├── usecase/     # Casos de uso
 │   │   │   └── errors.go    # Erros de dominio
 │   │   └── infrastructure/
 │   │       ├── database/    # Implementacao PostgreSQL (pgx), SchemaManager, TenantCache
+│   │       ├── email/       # Email sender (SendGrid API + LogSender para dev)
 │   │       └── http/        # Handlers, middleware, router (Gin)
-│   ├── migrations/          # Public migrations (tabela tenants)
+│   ├── migrations/          # Public migrations (tenants, global_users, memberships, invites)
 │   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits, recurring_transactions)
 ├── frontend/
 │   └── src/
-│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
+│       ├── pages/           # Login, Register, VerifyEmail, AcceptInvite, Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
 │       ├── components/      # Layout, auth, UI reutilizaveis
 │       ├── services/        # Clientes da API (auth, categories, transactions, dashboard, expense-limits, recurring-transactions, admin)
 │       ├── contexts/        # AuthContext
@@ -81,25 +82,27 @@ Base: `/api/v1`
 | Grupo | Endpoints |
 |-------|-----------|
 | Health | `GET /health` |
-| Auth | `POST /auth/login` |
+| Auth | `POST /auth/login`, `POST /auth/select-tenant`, `POST /auth/register`, `POST /auth/verify-email`, `GET /auth/invite-info`, `POST /auth/accept-invite` |
 | Profile | `GET/PUT /profile`, `POST /profile/change-password` |
 | Categories | `GET/POST /categories`, `PUT/DELETE /categories/:id` |
 | Transactions | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/:id` |
 | Expense Limits | `GET/POST /expense-limits`, `POST /expense-limits/copy`, `PUT/DELETE /expense-limits/:id` |
 | Recurring Transactions | `GET/POST /recurring-transactions`, `DELETE /recurring-transactions/:id`, `POST /recurring-transactions/:id/pause`, `POST /recurring-transactions/:id/resume` |
 | Dashboard | `GET /dashboard/summary`, `/by-category`, `/limits-progress` |
-| Admin | `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password` |
+| Admin | `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password`, `POST /admin/invite` |
 
 ## Multi-Tenancy
 
-- **Schema-per-tenant:** cada tenant tem seu proprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
-- Tenant identificado por subdominio (`financial.localhost` -> tenant `financial`)
-- Tabela `tenants` no schema `public` como registro central (id, name, domain, schema_name, is_active)
-- Isolamento por schema; queries usam `SET search_path` por conexao
-- 2 roles: `admin` (gerencia usuarios do tenant) e `user`
-- Somente admin cria usuarios — nao ha registro publico
-- Admin padrao por tenant: `admin@admin.com` / `admin123` (seed automatico)
-- Novo tenant: adicionar ao env `TENANTS` (ou `var.tenants` no Terraform) → app cria schema + seed no startup
+- **Schema-per-tenant:** cada tenant tem seu proprio schema PostgreSQL (ex: `tenant_minha_familia`)
+- **Global users:** tabela `public.global_users` para autenticacao centralizada (email/senha + verificacao de email)
+- **Per-schema users:** tabela `{schema}.users` com FK para `global_user_id` — mantem FKs de transacoes intactas
+- **Memberships:** tabela `public.memberships` vincula global_user → tenant (permite multi-tenant por usuario)
+- Tenant identificado via JWT claims (nao por subdominio)
+- **Login em 2 etapas:** login global → se multi-tenant, seleciona tenant → JWT final
+- **3 roles:** `owner` (criador, unico por tenant, irremovivel), `admin`, `user`
+- **Self-registration:** `POST /auth/register` cria conta global + tenant + schema automaticamente
+- **Verificacao de email:** registro envia email de verificacao; login requer email verificado
+- **Convites:** admin/owner convida por email → convidado aceita via link (cria conta se necessario)
 
 ## CI/CD
 
@@ -119,18 +122,13 @@ A infraestrutura e gerenciada via Terraform (`deploy/`):
 - **Cloud Run** — app serverless (0-2 instancias)
 - **Cloud SQL** — PostgreSQL 16
 - **Artifact Registry** — imagens Docker
-- **Secret Manager** — JWT secret
+- **Secret Manager** — JWT secret, SendGrid API key
 - **Workload Identity Federation** — autenticacao segura do GitHub Actions (sem chaves)
-- **Cloudflare DNS** — registros DNS por tenant (CNAME → Cloud Run, com proxy/CDN)
+- **Cloudflare DNS** — CNAME para Cloud Run + CNAMEs de autenticacao SendGrid
 
 ### DNS (Cloudflare)
 
-Cada tenant tem um subdominio explicito gerenciado via Terraform (`cloudflare.tf`). Para adicionar um novo tenant, inclua o nome na variavel `tenants` e rode o pipeline:
-
-```hcl
-# deploy/terraform.tfvars
-tenants = ["financial", "novo-tenant"]
-```
+DNS gerenciado via Terraform (`cloudflare.tf`). Inclui CNAME para o Cloud Run e CNAMEs de autenticacao do SendGrid (DKIM/SPF).
 
 Variaveis necessarias (GitHub Secrets):
 
@@ -138,7 +136,9 @@ Variaveis necessarias (GitHub Secrets):
 |--------|-----------|
 | `CLOUDFLARE_API_TOKEN` | Token da API com permissoes Zone:Read, DNS:Edit, Zone Settings:Edit |
 | `DOMAIN` | Dominio raiz (ex: `dnafami.com.br`) |
-| `TENANTS` | Lista de subdominos em formato HCL (ex: `["financial"]`) |
+| `SENDGRID_API_KEY` | API key do SendGrid para envio de emails |
+| `EMAIL_FROM` | Endereco remetente (ex: `noreply@dnafami.com.br`) |
+| `SENDGRID_DNS` | CNAMEs de autenticacao SendGrid em formato JSON |
 
 ### Deploy
 

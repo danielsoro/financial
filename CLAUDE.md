@@ -2,22 +2,22 @@
 
 ## Visão geral
 
-**DNA Fami** é um app de finanças **multi-tenant** com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais, criar transações recorrentes com parcelamento automático e visualizar resumos no dashboard. Dados são isolados por **tenant** (identificado por subdomínio).
+**DNA Fami** é um app de finanças **multi-tenant** com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais, criar transações recorrentes com parcelamento automático e visualizar resumos no dashboard. Dados são isolados por **tenant** (schema PostgreSQL).
 
 - **Logo:** dupla hélice de DNA minimalista em azul (`#2563EB`), localizada em `frontend/public/logo.svg`
 
 ## Multi-Tenancy
 
-- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_root`, `tenant_financial`)
-- **Tenant** é resolvido por subdomínio (ex: `financial.localhost` → tenant `financial`, `localhost` → tenant `root`)
-- **Tabela `tenants`** no schema `public` como registro central (id, name, domain, schema_name, is_active)
-- **Isolamento:** dados isolados por schema; middleware `SchemaConn` configura `SET search_path` uma vez por request e armazena a conexão no context via `ConnFromContext`
-- **Novo tenant:** adicionar ao `var.tenants` no Terraform → app cria schema + seed no startup
-- **2 roles:** `admin` (gerencia usuários do tenant), `user`
-- **Somente admin cria usuários** — não há registro público
-- **Admin padrão:** `admin@admin.com` / `admin123` (seed automático por schema)
-- **Tenant padrão:** domain=`root`, name=`Root`
-- **Env `TENANTS`:** lista de tenants separados por vírgula (ex: `root,financial`)
+- **Schema-per-tenant:** cada tenant tem seu próprio schema PostgreSQL (ex: `tenant_minha_familia`)
+- **Global users:** tabela `public.global_users` para autenticação centralizada (email/senha + verificação)
+- **Per-schema users:** tabela `{schema}.users` com FK para `global_user_id` — mantém FKs de transações intactas
+- **Memberships:** tabela `public.memberships` vincula global_user → tenant (permite multi-tenant por usuário)
+- **JWT `sub`** continua sendo o per-schema user_id; claims incluem `global_user_id`, `tenant_id`, `role`
+- **Isolamento:** middleware `SchemaConn` configura `SET search_path` por request via `ConnFromContext`
+- **Novo tenant:** criado via self-registration (POST /auth/register) — app cria schema + migrations dinamicamente
+- **3 roles:** `owner` (criador, único por tenant, irremovível), `admin`, `user`
+- **Self-registration:** cria conta global + tenant + schema automaticamente
+- **Convites:** admin/owner convida por email → convidado aceita via link (cria conta se necessário)
 
 ## Comandos úteis (rodar da raiz `finance/`)
 
@@ -38,25 +38,25 @@ finance/
 ├── backend/          # Go API (Clean Architecture)
 │   ├── cmd/api/      # Entrypoint
 │   ├── internal/
-│   │   ├── config/          # Variáveis de ambiente
+│   │   ├── config/          # Variáveis de ambiente (DB, JWT, SendGrid, APP_URL)
 │   │   ├── tenant/          # Context helpers (ContextWithSchema, SchemaFromContext)
 │   │   ├── domain/
-│   │   │   ├── entity/      # Entidades (User, Tenant, Category, Transaction, ExpenseLimit, RecurringTransaction)
+│   │   │   ├── entity/      # Entidades (User, Tenant, GlobalUser, Membership, Invite, Category, Transaction, ExpenseLimit, RecurringTransaction)
 │   │   │   ├── repository/  # Interfaces dos repositórios
-│   │   │   └── usecase/     # Casos de uso (auth, admin, category, transaction, expense_limit, recurring_transaction, dashboard)
+│   │   │   └── usecase/     # Casos de uso (auth, registration, invite, admin, category, transaction, expense_limit, recurring_transaction, dashboard)
 │   │   └── infrastructure/
 │   │       ├── database/    # Implementação PostgreSQL (pgx), SchemaManager, TenantCache, ConnFromContext
+│   │       ├── email/       # Email sender (SendGrid API + LogSender para dev) + templates HTML
 │   │       └── http/        # Handlers, middleware (auth, cors, role, schema), router (Gin)
-│   ├── migrations/          # Public migrations (tabela tenants)
+│   ├── migrations/          # Public migrations (tenants, global_users, memberships, invites)
 │   └── tenant_migrations/   # Per-tenant migrations (users, categories, transactions, expense_limits, recurring_transactions)
 ├── frontend/         # React SPA
 │   └── src/
-│       ├── pages/           # Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
+│       ├── pages/           # Login, Register, VerifyEmail, AcceptInvite, Dashboard, Income, Expense, Categories, ExpenseLimits, RecurringTransactions, Profile, Users
 │       ├── components/      # Layout, auth (ProtectedRoute, AdminRoute), UI
 │       ├── services/        # API (auth, categories, transactions, dashboard, expense-limits, recurring-transactions, admin)
 │       ├── contexts/        # AuthContext
 │       └── types/           # TypeScript interfaces
-├── deploy/           # Terraform (Cloud Run, Cloud SQL, IAM, Secrets, Cloudflare DNS)
 ├── .github/workflows/ # CI/CD (lint, build, deploy, infra)
 ├── Dockerfile        # Multi-stage: frontend + backend
 ├── Makefile
@@ -66,7 +66,12 @@ finance/
 ## API Endpoints
 
 ### Públicos
-- `POST /api/v1/auth/login` — login com email, password, subdomain
+- `POST /api/v1/auth/login` — login global (email, password) → token ou selector
+- `POST /api/v1/auth/select-tenant` — seleciona tenant (selector_token, tenant_id) → JWT
+- `POST /api/v1/auth/register` — cria conta + tenant (name, email, password, tenant_name)
+- `POST /api/v1/auth/verify-email` — verifica email (token)
+- `GET /api/v1/auth/invite-info` — info do convite (?token=xxx)
+- `POST /api/v1/auth/accept-invite` — aceita convite (token, name?, password?)
 
 ### Protegidos (JWT)
 - Profile: `GET/PUT /profile`, `POST /profile/change-password`
@@ -76,8 +81,33 @@ finance/
 - Recurring Transactions: `GET/POST /recurring-transactions`, `DELETE /recurring-transactions/:id`, `POST /recurring-transactions/:id/pause`, `POST /recurring-transactions/:id/resume`
 - Dashboard: `GET /dashboard/summary`, `/dashboard/by-category`, `/dashboard/limits-progress`
 
-### Admin (role: admin)
+### Admin (role: admin ou owner)
 - `GET/POST /admin/users`, `PUT/DELETE /admin/users/:id`, `POST /admin/users/:id/reset-password`
+- `POST /admin/invite` — envia convite por email (email, role)
+
+## Fluxo de autenticação
+
+### Login em duas etapas
+1. `POST /auth/login {email, password}` → valida contra `global_users`
+2. Se 1 tenant → auto-select: retorna `{token, user}`
+3. Se N tenants → retorna `{selector_token, tenants: [{tenant_id, tenant_name, role}]}`
+4. `POST /auth/select-tenant {selector_token, tenant_id}` → retorna `{token, user}`
+
+### Registro
+1. `POST /auth/register {name, email, password, tenant_name}`
+2. Cria global_user (email_verified=false), tenant, schema, per-schema user, membership
+3. Envia email de verificação → `POST /auth/verify-email {token}`
+
+### JWT Claims
+```json
+{
+  "sub": "per-schema-user-id",
+  "tenant_id": "...",
+  "global_user_id": "...",
+  "role": "owner|admin|user",
+  "exp": "...", "iat": "..."
+}
+```
 
 ## Recorrências e Parcelamento
 
@@ -96,13 +126,15 @@ finance/
 - **Linguagem:** Go 1.26
 - **Framework HTTP:** Gin
 - **Banco:** PostgreSQL via pgx/v5 (sem ORM)
-- **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, role
+- **Auth:** JWT (golang-jwt/v5) com claims: sub, tenant_id, global_user_id, role
 - **Arquitetura:** Clean Architecture — entity → repository interface → usecase → handler
 - **Erros de domínio** definidos em `internal/domain/errors.go` e mapeados para HTTP status nos handlers
-- **Acesso ao banco:** repositórios obtêm a conexão via `database.ConnFromContext(ctx)` — a conexão já vem com `search_path` configurado pelo middleware `SchemaConn`
-- **`AcquireWithSchema`:** usado apenas pelo middleware `SchemaConn` e pelo login handler (que precisa resolver o tenant antes do middleware)
-- **Fluxo do login:** handler resolve tenant via `ResolveTenant`, configura conexão com `AcquireWithSchema` + `ContextWithConn`, depois chama `Authenticate`
-- **CORS:** controlado por `ALLOWED_ORIGIN` — aceita o domínio e todos os subdomínios (tenants). Se vazio ou `*`, aceita qualquer origin
+- **Acesso ao banco (per-schema):** repositórios obtêm a conexão via `database.ConnFromContext(ctx)` — a conexão já vem com `search_path` configurado pelo middleware `SchemaConn`
+- **Acesso ao banco (global):** `GlobalUserRepo`, `MembershipRepo`, `InviteRepo` usam o pool direto (schema public)
+- **`AcquireWithSchema`:** usado pelo middleware `SchemaConn`, login handler, e registration flow
+- **Email:** interface `Sender` com `SendGridSender` (via `sendgrid-go` SDK) + `LogSender` (fallback se `SENDGRID_API_KEY` vazio — logs no stdout)
+- **Config de email:** `SENDGRID_API_KEY` (API key do SendGrid) + `EMAIL_FROM` (endereço remetente, ex: `noreply@dnafami.com.br`)
+- **CORS:** controlado por `ALLOWED_ORIGIN` — exact match + localhost. Se vazio ou `*`, aceita qualquer origin
 
 ### Frontend
 
