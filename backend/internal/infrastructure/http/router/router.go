@@ -83,6 +83,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	// Serve frontend static files (production)
 	if staticDir != "" {
 		r.StaticFS("/assets", http.Dir(staticDir+"/assets"))
+		r.StaticFile("/logo.svg", staticDir+"/logo.svg")
 
 		r.NoRoute(func(c *gin.Context) {
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
