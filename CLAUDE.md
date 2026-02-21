@@ -1,8 +1,10 @@
-# Finance — Guia para Claude Code
+# DNA Fami — Guia para Claude Code
 
 ## Visão geral
 
-App de finanças **multi-tenant** com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados são isolados por **tenant** (identificado por subdomínio).
+**DNA Fami** é um app de finanças **multi-tenant** com **Go backend** + **React frontend** + **PostgreSQL**. Permite cadastrar receitas/despesas, organizar por categorias hierárquicas, definir tetos de gastos mensais e visualizar resumos no dashboard. Dados são isolados por **tenant** (identificado por subdomínio).
+
+- **Logo:** dupla hélice de DNA minimalista em azul (`#2563EB`), localizada em `frontend/public/logo.svg`
 
 ## Multi-Tenancy
 

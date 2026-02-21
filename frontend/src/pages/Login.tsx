@@ -31,7 +31,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Finance</h1>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <img src="/logo.svg" alt="DNA Fami" className="h-8 w-8" />
+          <h1 className="text-2xl font-bold text-gray-900">DNA Fami</h1>
+        </div>
         <p className="text-gray-500 mb-6">Faça login para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
