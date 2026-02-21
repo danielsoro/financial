@@ -16,6 +16,14 @@ const formatDate = (dateStr: string) => {
   return d.toLocaleDateString('pt-BR');
 };
 
+const formatAmount = (rt: RecurringTransaction) => {
+  if (rt.max_occurrences) {
+    const installment = rt.amount / rt.max_occurrences;
+    return `${formatCurrency(rt.amount)} (${rt.max_occurrences}x ${formatCurrency(installment)})`;
+  }
+  return formatCurrency(rt.amount);
+};
+
 const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
   weekly: 'Semanal',
   biweekly: 'Quinzenal',
@@ -122,7 +130,7 @@ export default function RecurringTransactions() {
                     </span>
                   </div>
                   <span className={`font-medium whitespace-nowrap ${rt.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(rt.amount)}
+                    {formatAmount(rt)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -199,7 +207,7 @@ export default function RecurringTransactions() {
                       <td className="px-6 py-4 text-gray-500 text-sm">{FREQUENCY_LABELS[rt.frequency]}</td>
                       <td className="px-6 py-4 text-gray-500 text-sm">{formatDate(rt.start_date)}</td>
                       <td className={`px-6 py-4 text-right font-medium ${rt.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(rt.amount)}
+                        {formatAmount(rt)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

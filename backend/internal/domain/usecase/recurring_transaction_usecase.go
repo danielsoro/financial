@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/dcunha/finance/backend/internal/domain"
@@ -99,7 +101,15 @@ func (uc *RecurringTransactionUsecase) Resume(ctx context.Context, id uuid.UUID,
 	rt.PausedAt = nil
 
 	if hasConflict && onConflict == "update" {
-		if err := uc.updateExistingTransactions(ctx, rt, existing, firstDay, lastDay); err != nil {
+		var startOrdinal int
+		if rt.MaxOccurrences != nil {
+			preCount, err := uc.transactionRepo.CountByRecurringIDBeforeDate(ctx, id, firstDay.Format("2006-01-02"))
+			if err != nil {
+				return err
+			}
+			startOrdinal = preCount
+		}
+		if err := uc.updateExistingTransactions(ctx, rt, existing, firstDay, lastDay, startOrdinal); err != nil {
 			return err
 		}
 		// Generate future transactions from next month onward
@@ -112,7 +122,7 @@ func (uc *RecurringTransactionUsecase) Resume(ctx context.Context, id uuid.UUID,
 	return uc.generateTransactions(ctx, rt, resumeStart)
 }
 
-func (uc *RecurringTransactionUsecase) updateExistingTransactions(ctx context.Context, rt *entity.RecurringTransaction, existing []entity.Transaction, firstDay, lastDay time.Time) error {
+func (uc *RecurringTransactionUsecase) updateExistingTransactions(ctx context.Context, rt *entity.RecurringTransaction, existing []entity.Transaction, firstDay, lastDay time.Time, startOrdinal int) error {
 	expectedDates := computeAllDates(rt, firstDay, lastDay)
 
 	existingByDate := make(map[string]entity.Transaction)
@@ -123,12 +133,18 @@ func (uc *RecurringTransactionUsecase) updateExistingTransactions(ctx context.Co
 	var toUpdate []entity.Transaction
 	var toCreate []entity.Transaction
 
-	for _, d := range expectedDates {
+	for i, d := range expectedDates {
 		dateStr := d.Format("2006-01-02")
+		amt := rt.Amount
+		desc := rt.Description
+		if rt.MaxOccurrences != nil {
+			amt = installmentAmount(rt.Amount, *rt.MaxOccurrences, startOrdinal+i)
+			desc = installmentDescription(rt.Description, startOrdinal+i+1, *rt.MaxOccurrences)
+		}
 		if ex, ok := existingByDate[dateStr]; ok {
 			ex.Type = rt.Type
-			ex.Amount = rt.Amount
-			ex.Description = rt.Description
+			ex.Amount = amt
+			ex.Description = desc
 			ex.CategoryID = rt.CategoryID
 			toUpdate = append(toUpdate, ex)
 		} else {
@@ -136,8 +152,8 @@ func (uc *RecurringTransactionUsecase) updateExistingTransactions(ctx context.Co
 				UserID:      rt.UserID,
 				CategoryID:  rt.CategoryID,
 				Type:        rt.Type,
-				Amount:      rt.Amount,
-				Description: rt.Description,
+				Amount:      amt,
+				Description: desc,
 				Date:        dateStr,
 				RecurringID: &rt.ID,
 			})
@@ -180,11 +196,13 @@ func (uc *RecurringTransactionUsecase) generateTransactions(ctx context.Context,
 	dates := computeAllDates(rt, fromDate, toDate)
 
 	// Respect max_occurrences
+	var startOrdinal int
 	if rt.MaxOccurrences != nil {
 		existingCount, err := uc.transactionRepo.CountByRecurringID(ctx, rt.ID)
 		if err != nil {
 			return err
 		}
+		startOrdinal = existingCount
 		remaining := *rt.MaxOccurrences - existingCount
 		if remaining <= 0 {
 			return nil
@@ -200,18 +218,43 @@ func (uc *RecurringTransactionUsecase) generateTransactions(ctx context.Context,
 
 	txs := make([]entity.Transaction, len(dates))
 	for i, d := range dates {
+		amt := rt.Amount
+		desc := rt.Description
+		if rt.MaxOccurrences != nil {
+			amt = installmentAmount(rt.Amount, *rt.MaxOccurrences, startOrdinal+i)
+			desc = installmentDescription(rt.Description, startOrdinal+i+1, *rt.MaxOccurrences)
+		}
 		txs[i] = entity.Transaction{
 			UserID:      rt.UserID,
 			CategoryID:  rt.CategoryID,
 			Type:        rt.Type,
-			Amount:      rt.Amount,
-			Description: rt.Description,
+			Amount:      amt,
+			Description: desc,
 			Date:        d.Format("2006-01-02"),
 			RecurringID: &rt.ID,
 		}
 	}
 
 	return uc.transactionRepo.BulkCreate(ctx, txs)
+}
+
+// installmentAmount calculates the amount for a specific installment.
+// absoluteIndex is 0-based. The last installment absorbs rounding differences.
+func installmentAmount(total float64, n, absoluteIndex int) float64 {
+	base := math.Round((total/float64(n))*100) / 100
+	if absoluteIndex == n-1 {
+		return math.Round((total-base*float64(n-1))*100) / 100
+	}
+	return base
+}
+
+// installmentDescription returns "base - Parcela X/N".
+func installmentDescription(base string, ordinal, total int) string {
+	label := fmt.Sprintf("Parcela %d/%d", ordinal, total)
+	if base == "" {
+		return label
+	}
+	return fmt.Sprintf("%s - %s", base, label)
 }
 
 func computeAllDates(rt *entity.RecurringTransaction, from, to time.Time) []time.Time {

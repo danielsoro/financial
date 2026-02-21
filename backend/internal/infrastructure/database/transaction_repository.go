@@ -116,6 +116,22 @@ func (r *TransactionRepo) CountByRecurringID(ctx context.Context, recurringID uu
 	return count, nil
 }
 
+func (r *TransactionRepo) CountByRecurringIDBeforeDate(ctx context.Context, recurringID uuid.UUID, beforeDate string) (int, error) {
+	conn, err := ConnFromContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = conn.QueryRow(ctx,
+		`SELECT COUNT(*) FROM transactions WHERE recurring_id = $1 AND date < $2`, recurringID, beforeDate,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *TransactionRepo) Update(ctx context.Context, tx *entity.Transaction) error {
 	conn, err := ConnFromContext(ctx)
 	if err != nil {

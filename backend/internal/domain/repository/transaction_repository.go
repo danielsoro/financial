@@ -15,6 +15,7 @@ type TransactionRepository interface {
 	DeleteByRecurringID(ctx context.Context, recurringID uuid.UUID, mode entity.DeleteMode) error
 	DeleteFutureByRecurringID(ctx context.Context, recurringID uuid.UUID, fromDate string) error
 	CountByRecurringID(ctx context.Context, recurringID uuid.UUID) (int, error)
+	CountByRecurringIDBeforeDate(ctx context.Context, recurringID uuid.UUID, beforeDate string) (int, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Transaction, error)
 	FindAll(ctx context.Context, filter entity.TransactionFilter) (*entity.PaginatedTransactions, error)
 	GetSummary(ctx context.Context, month, year int, userID *uuid.UUID) (*entity.DashboardSummary, error)
