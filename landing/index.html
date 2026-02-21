@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNA Fami — Finanças da sua família</title>
+  <meta name="description" content="Organize as finanças da sua família com o DNA Fami. Controle receitas, despesas, orçamentos e muito mais.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="DNA Fami — Finanças da sua família">
+  <meta property="og:description" content="Organize as finanças da sua família com o DNA Fami. Controle receitas, despesas, orçamentos e muito mais.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dnafami.com.br">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-white text-gray-900 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="w-full px-6 py-4">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" class="h-8 w-8">
+          <path d="M16 8 C16 8, 32 20, 32 32 C32 44, 16 56, 16 56" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <path d="M48 8 C48 8, 32 20, 32 32 C32 44, 48 56, 48 56" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <line x1="22" y1="16" x2="42" y2="16" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+          <line x1="18" y1="24" x2="46" y2="24" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+          <line x1="20" y1="32" x2="44" y2="32" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+          <line x1="18" y1="40" x2="46" y2="40" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+          <line x1="22" y1="48" x2="42" y2="48" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+          <circle cx="16" cy="8" r="3" fill="#2563EB"/>
+          <circle cx="48" cy="8" r="3" fill="#2563EB"/>
+          <circle cx="16" cy="56" r="3" fill="#2563EB"/>
+          <circle cx="48" cy="56" r="3" fill="#2563EB"/>
+        </svg>
+        <span class="text-xl font-bold text-gray-900">DNA Fami</span>
+      </div>
+      <a href="https://app.dnafami.com.br/login"
+         class="inline-flex items-center justify-center px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors">
+        Entrar
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="px-6 py-20 sm:py-24">
+      <div class="max-w-2xl mx-auto text-center">
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
+          As finanças da sua família no
+          <span class="text-blue-600">DNA</span>
+        </h1>
+        <p class="mt-6 text-lg sm:text-xl text-gray-600 leading-relaxed">
+          Controle receitas, despesas e orçamentos em um s&oacute; lugar.
+          Simples, colaborativo e feito para fam&iacute;lias.
+        </p>
+        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="https://app.dnafami.com.br/login"
+             class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
+            Entrar
+          </a>
+          <a href="https://app.dnafami.com.br/register"
+             class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 rounded-lg border-2 border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition-colors">
+            Criar conta
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Funcionalidades -->
+    <section class="bg-gray-50 px-6 py-20 sm:py-24">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-3xl sm:text-4xl font-bold text-center text-gray-900">
+          Tudo que você precisa para organizar suas finanças
+        </h2>
+        <p class="mt-4 text-lg text-gray-600 text-center max-w-2xl mx-auto">
+          Feito para famílias que querem ter controle financeiro sem complicação.
+        </p>
+
+        <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+          <!-- Dashboard -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Visão completa</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Resumo de receitas, despesas e saldo. Gráfico por categoria. Alterne entre visão pessoal e da família.
+            </p>
+          </div>
+
+          <!-- Categorias -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Categorias inteligentes</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Organize suas finanças com categorias hierárquicas personalizadas. Crie subcategorias como "Alimentação > Restaurantes".
+            </p>
+          </div>
+
+          <!-- Orçamentos -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Tetos de gastos</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Defina limites mensais por categoria ou global. Barra de progresso visual com alertas quando se aproxima do limite.
+            </p>
+          </div>
+
+          <!-- Recorrências -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Parcelas e recorrências</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Cadastre despesas fixas e parcelamentos. O app divide o valor total em parcelas e gera lançamentos automaticamente.
+            </p>
+          </div>
+
+          <!-- Família -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Feito para famílias</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Convide membros por email. Controle quem pode ver, editar e administrar as finanças com 3 níveis de permissão.
+            </p>
+          </div>
+
+          <!-- Multi-tenant -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-blue-50 rounded-lg p-3 w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2563EB" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+              </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">Múltiplas famílias</h3>
+            <p class="mt-2 text-gray-600 text-sm leading-relaxed">
+              Uma conta, vários grupos. Participe de diferentes famílias ou orçamentos com o mesmo login.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA final -->
+    <section class="px-6 py-20 sm:py-24">
+      <div class="max-w-2xl mx-auto text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900">
+          Comece a organizar as finanças da sua família
+        </h2>
+        <p class="mt-4 text-lg text-gray-600">
+          Crie sua conta gratuita e tenha controle total em minutos.
+        </p>
+        <div class="mt-8">
+          <a href="https://app.dnafami.com.br/register"
+             class="inline-flex items-center justify-center px-8 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
+            Criar conta grátis
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full px-6 py-6 border-t border-gray-100">
+    <div class="max-w-5xl mx-auto text-center text-sm text-gray-400">
+      &copy; 2025 DNA Fami
+    </div>
+  </footer>
+
+</body>
+</html>
