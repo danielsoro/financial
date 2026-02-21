@@ -70,7 +70,7 @@ export default function AppLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-gray-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out w-64 ${
+        className={`fixed left-0 top-0 h-dvh bg-gray-900 text-white flex flex-col z-50 transition-all duration-300 ease-in-out w-64 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 ${collapsed ? 'md:w-16' : 'md:w-64'}`}
       >
