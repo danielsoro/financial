@@ -11,10 +11,3 @@ domain               = "example.com"
 # SendGrid
 sendgrid_api_key = ""
 email_from       = "noreply@example.com"
-sendgrid_dns     = []
-# Após configurar Domain Authentication no SendGrid UI, preencher:
-# sendgrid_dns = [
-#   { name = "em1234.example.com", value = "u1234.wl.sendgrid.net" },
-#   { name = "s1._domainkey.example.com", value = "s1.domainkey.u1234.wl.sendgrid.net" },
-#   { name = "s2._domainkey.example.com", value = "s2.domainkey.u1234.wl.sendgrid.net" },
-# ]

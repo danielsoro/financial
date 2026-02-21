@@ -124,11 +124,11 @@ A infraestrutura e gerenciada via Terraform (`deploy/`):
 - **Artifact Registry** — imagens Docker
 - **Secret Manager** — JWT secret, SendGrid API key
 - **Workload Identity Federation** — autenticacao segura do GitHub Actions (sem chaves)
-- **Cloudflare DNS** — CNAME para Cloud Run + CNAMEs de autenticacao SendGrid
+- **Cloudflare DNS** — CNAME para Cloud Run
 
 ### DNS (Cloudflare)
 
-DNS gerenciado via Terraform (`cloudflare.tf`). Inclui CNAME para o Cloud Run e CNAMEs de autenticacao do SendGrid (DKIM/SPF).
+DNS gerenciado via Terraform (`cloudflare.tf`). Inclui CNAME para o Cloud Run.
 
 Variaveis necessarias (GitHub Secrets):
 
@@ -138,7 +138,7 @@ Variaveis necessarias (GitHub Secrets):
 | `DOMAIN` | Dominio raiz (ex: `dnafami.com.br`) |
 | `SENDGRID_API_KEY` | API key do SendGrid para envio de emails |
 | `EMAIL_FROM` | Endereco remetente (ex: `noreply@dnafami.com.br`) |
-| `SENDGRID_DNS` | CNAMEs de autenticacao SendGrid em formato JSON |
+
 
 ### Deploy
 

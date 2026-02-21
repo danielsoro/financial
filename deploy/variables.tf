@@ -60,12 +60,3 @@ variable "email_from" {
   default     = "noreply@dnafami.com.br"
   description = "Email sender address"
 }
-
-variable "sendgrid_dns" {
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default     = []
-  description = "SendGrid domain authentication CNAME records (from SendGrid UI)"
-}
