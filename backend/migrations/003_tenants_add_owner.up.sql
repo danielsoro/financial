@@ -1,0 +1,2 @@
+ALTER TABLE tenants ADD COLUMN owner_id UUID REFERENCES global_users(id);
+ALTER TABLE tenants ALTER COLUMN domain DROP NOT NULL;

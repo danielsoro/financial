@@ -48,8 +48,24 @@ variable "domain" {
   description = "Root domain (e.g., financeiro.app)"
 }
 
-variable "tenants" {
-  type        = list(string)
-  default     = ["financial"]
-  description = "Tenant subdomains to create DNS records for"
+variable "sendgrid_api_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "SendGrid API key (empty = LogSender in dev)"
+}
+
+variable "email_from" {
+  type        = string
+  default     = "noreply@dnafami.com.br"
+  description = "Email sender address"
+}
+
+variable "sendgrid_dns" {
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default     = []
+  description = "SendGrid domain authentication CNAME records (from SendGrid UI)"
 }

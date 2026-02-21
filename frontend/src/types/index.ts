@@ -1,14 +1,31 @@
 export interface User {
   id: string;
-  tenant_id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'owner' | 'admin' | 'user';
+  global_user_id?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface AuthResponse {
+export interface TenantInfo {
+  tenant_id: string;
+  tenant_name: string;
+  role: string;
+}
+
+export interface LoginResponse {
+  // Single tenant (auto-select)
+  token?: string;
+  user?: User;
+  tenant_id?: string;
+
+  // Multi-tenant (selector)
+  selector_token?: string;
+  tenants?: TenantInfo[];
+}
+
+export interface SelectTenantResponse {
   token: string;
   user: User;
 }
@@ -16,20 +33,27 @@ export interface AuthResponse {
 export interface Tenant {
   id: string;
   name: string;
-  domain: string;
+  domain?: string;
   is_active: boolean;
+  owner_id?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface AdminUser {
   id: string;
-  tenant_id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'owner' | 'admin' | 'user';
   created_at: string;
   updated_at: string;
+}
+
+export interface InviteInfo {
+  tenant_name: string;
+  email: string;
+  role: string;
+  user_exists: boolean;
 }
 
 export interface Category {

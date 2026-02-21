@@ -71,8 +71,18 @@ resource "google_cloud_run_v2_service" "finance" {
       }
 
       env {
-        name  = "TENANTS"
-        value = join(",", concat(["root"], var.tenants))
+        name = "SENDGRID_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.sendgrid_api_key.secret_id
+            version = "latest"
+          }
+        }
+      }
+
+      env {
+        name  = "EMAIL_FROM"
+        value = var.email_from
       }
 
       volume_mounts {
@@ -98,6 +108,7 @@ resource "google_cloud_run_v2_service" "finance" {
   depends_on = [
     google_project_service.apis,
     google_secret_manager_secret_version.jwt_secret,
+    google_secret_manager_secret_version.sendgrid_api_key,
   ]
 
 }

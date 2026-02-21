@@ -14,6 +14,8 @@ import (
 type Handlers struct {
 	Health       *handler.HealthHandler
 	Auth         *handler.AuthHandler
+	Registration *handler.RegistrationHandler
+	Invite       *handler.InviteHandler
 	Category     *handler.CategoryHandler
 	Transaction  *handler.TransactionHandler
 	ExpenseLimit *handler.ExpenseLimitHandler
@@ -32,6 +34,11 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	// Auth (public)
 	auth := api.Group("/auth")
 	auth.POST("/login", h.Auth.Login)
+	auth.POST("/select-tenant", h.Auth.SelectTenant)
+	auth.POST("/register", h.Registration.Register)
+	auth.POST("/verify-email", h.Registration.VerifyEmail)
+	auth.GET("/invite-info", h.Invite.GetInviteInfo)
+	auth.POST("/accept-invite", h.Invite.AcceptInvite)
 
 	// Protected routes
 	protected := api.Group("")
@@ -80,7 +87,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	dash.GET("/by-category", h.Dashboard.ByCategory)
 	dash.GET("/limits-progress", h.Dashboard.LimitsProgress)
 
-	// Admin routes
+	// Admin routes (admin or owner)
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RequireAdmin())
 	admin.GET("/users", h.Admin.ListUsers)
@@ -88,6 +95,7 @@ func Setup(r *gin.Engine, jwtSecret string, staticDir string, allowedOrigin stri
 	admin.PUT("/users/:id", h.Admin.UpdateUser)
 	admin.DELETE("/users/:id", h.Admin.DeleteUser)
 	admin.POST("/users/:id/reset-password", h.Admin.ResetPassword)
+	admin.POST("/invite", h.Invite.CreateInvite)
 
 	// Serve frontend static files (production)
 	if staticDir != "" {

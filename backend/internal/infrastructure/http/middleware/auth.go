@@ -58,6 +58,10 @@ func Auth(jwtSecret string, tenantCache *database.TenantCache) gin.HandlerFunc {
 
 		role, _ := claims["role"].(string)
 
+		// Extract global_user_id
+		globalUserIDStr, _ := claims["global_user_id"].(string)
+		globalUserID, _ := uuid.Parse(globalUserIDStr)
+
 		// Look up tenant in cache and inject schema into request context
 		t, ok := tenantCache.GetByID(tenantID)
 		if !ok {
@@ -70,6 +74,8 @@ func Auth(jwtSecret string, tenantCache *database.TenantCache) gin.HandlerFunc {
 
 		c.Set("userID", userID)
 		c.Set("role", role)
+		c.Set("tenantID", tenantID)
+		c.Set("globalUserID", globalUserID)
 		c.Next()
 	}
 }
@@ -80,4 +86,12 @@ func GetUserID(c *gin.Context) uuid.UUID {
 
 func GetRole(c *gin.Context) string {
 	return c.MustGet("role").(string)
+}
+
+func GetTenantID(c *gin.Context) uuid.UUID {
+	return c.MustGet("tenantID").(uuid.UUID)
+}
+
+func GetGlobalUserID(c *gin.Context) uuid.UUID {
+	return c.MustGet("globalUserID").(uuid.UUID)
 }

@@ -21,15 +21,15 @@ resource "cloudflare_record" "root" {
   ttl     = 1
 }
 
-resource "cloudflare_record" "tenant" {
-  for_each = toset(var.tenants)
+resource "cloudflare_record" "sendgrid" {
+  for_each = { for r in var.sendgrid_dns : r.name => r }
 
   zone_id = local.zone_id
-  name    = each.value
-  content = local.cloud_run_hostname
+  name    = each.value.name
+  content = each.value.value
   type    = "CNAME"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
 
 resource "cloudflare_workers_script" "origin_rewrite" {
@@ -53,8 +53,3 @@ resource "cloudflare_workers_route" "root" {
   script_name = cloudflare_workers_script.origin_rewrite.name
 }
 
-resource "cloudflare_workers_route" "subdomains" {
-  zone_id     = local.zone_id
-  pattern     = "*.${var.domain}/*"
-  script_name = cloudflare_workers_script.origin_rewrite.name
-}

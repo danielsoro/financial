@@ -56,7 +56,9 @@ jobs:
             -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}" \
             -var="cloudflare_account_id=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" \
             -var="domain=${{ secrets.DOMAIN }}" \
-            -var='tenants=${{ secrets.TENANTS }}'
+            -var="sendgrid_api_key=${{ secrets.SENDGRID_API_KEY }}" \
+            -var="email_from=${{ secrets.EMAIL_FROM }}" \
+            -var='sendgrid_dns=${{ secrets.SENDGRID_DNS }}'
 
   apply:
     name: Terraform Apply
@@ -103,4 +105,6 @@ jobs:
             -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}" \
             -var="cloudflare_account_id=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" \
             -var="domain=${{ secrets.DOMAIN }}" \
-            -var='tenants=${{ secrets.TENANTS }}'
+            -var="sendgrid_api_key=${{ secrets.SENDGRID_API_KEY }}" \
+            -var="email_from=${{ secrets.EMAIL_FROM }}" \
+            -var='sendgrid_dns=${{ secrets.SENDGRID_DNS }}'

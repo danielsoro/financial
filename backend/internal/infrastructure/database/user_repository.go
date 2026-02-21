@@ -23,9 +23,9 @@ func (r *UserRepo) Create(ctx context.Context, user *entity.User) error {
 	}
 
 	err = conn.QueryRow(ctx,
-		`INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)
+		`INSERT INTO users (name, email, password_hash, role, global_user_id) VALUES ($1, $2, $3, $4, $5)
 		 RETURNING id, created_at, updated_at`,
-		user.Name, user.Email, user.PasswordHash, user.Role,
+		user.Name, user.Email, user.PasswordHash, user.Role, user.GlobalUserID,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if isDuplicateKey(err) {
@@ -44,8 +44,8 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*entity.User,
 
 	var u entity.User
 	err = conn.QueryRow(ctx,
-		`SELECT id, name, email, password_hash, role, created_at, updated_at FROM users WHERE email = $1`, email,
-	).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+		`SELECT id, name, email, password_hash, role, global_user_id, created_at, updated_at FROM users WHERE email = $1`, email,
+	).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.GlobalUserID, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -63,8 +63,8 @@ func (r *UserRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.User, er
 
 	var u entity.User
 	err = conn.QueryRow(ctx,
-		`SELECT id, name, email, password_hash, role, created_at, updated_at FROM users WHERE id = $1`, id,
-	).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+		`SELECT id, name, email, password_hash, role, global_user_id, created_at, updated_at FROM users WHERE id = $1`, id,
+	).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.GlobalUserID, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -81,10 +81,10 @@ func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
 	}
 
 	err = conn.QueryRow(ctx,
-		`UPDATE users SET name = $1, email = $2, password_hash = $3, role = $4, updated_at = NOW()
-		 WHERE id = $5
+		`UPDATE users SET name = $1, email = $2, password_hash = $3, role = $4, global_user_id = $5, updated_at = NOW()
+		 WHERE id = $6
 		 RETURNING updated_at`,
-		user.Name, user.Email, user.PasswordHash, user.Role, user.ID,
+		user.Name, user.Email, user.PasswordHash, user.Role, user.GlobalUserID, user.ID,
 	).Scan(&user.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

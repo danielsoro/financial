@@ -33,16 +33,10 @@ func isAllowedOrigin(origin, allowedOrigin string) bool {
 		return true
 	}
 
-	// allowedOrigin = "dnafami.com.br"
-	// Allow: https://dnafami.com.br, https://*.dnafami.com.br
 	origin = strings.TrimPrefix(origin, "https://")
 	origin = strings.TrimPrefix(origin, "http://")
 
 	if origin == allowedOrigin {
-		return true
-	}
-
-	if strings.HasSuffix(origin, "."+allowedOrigin) {
 		return true
 	}
 
