@@ -21,18 +21,6 @@ resource "cloudflare_record" "root" {
   ttl     = 1
 }
 
-resource "cloudflare_record" "sendgrid" {
-  for_each = { for r in var.sendgrid_dns : r.name => r }
-
-  zone_id         = local.zone_id
-  name            = each.value.name
-  content         = each.value.value
-  type            = "CNAME"
-  proxied         = false
-  ttl             = 3600
-  allow_overwrite = true
-}
-
 resource "cloudflare_workers_script" "origin_rewrite" {
   account_id = var.cloudflare_account_id
   name       = "finance-origin-rewrite"
