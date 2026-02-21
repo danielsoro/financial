@@ -133,6 +133,13 @@ export interface RecurringTransaction {
 
 export type RecurringDeleteMode = 'all' | 'future_and_current' | 'future_only';
 
+export type ResumeConflictStrategy = 'create' | 'update';
+
+export interface ResumeConflictResponse {
+  conflict: true;
+  existing_transactions: Transaction[];
+}
+
 export interface RecurringTransactionFilter {
   type?: string;
   is_active?: boolean;

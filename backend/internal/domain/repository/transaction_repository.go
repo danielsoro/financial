@@ -19,4 +19,6 @@ type TransactionRepository interface {
 	FindAll(ctx context.Context, filter entity.TransactionFilter) (*entity.PaginatedTransactions, error)
 	GetSummary(ctx context.Context, month, year int, userID *uuid.UUID) (*entity.DashboardSummary, error)
 	GetByCategory(ctx context.Context, month, year int, txType string, userID *uuid.UUID) ([]entity.CategoryTotal, error)
+	FindByRecurringIDAndDateRange(ctx context.Context, recurringID uuid.UUID, fromDate, toDate string) ([]entity.Transaction, error)
+	BulkUpdate(ctx context.Context, txs []entity.Transaction) error
 }

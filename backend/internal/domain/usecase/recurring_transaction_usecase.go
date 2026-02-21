@@ -65,7 +65,7 @@ func (uc *RecurringTransactionUsecase) Pause(ctx context.Context, id uuid.UUID) 
 	return uc.recurringRepo.Pause(ctx, id, now)
 }
 
-func (uc *RecurringTransactionUsecase) Resume(ctx context.Context, id uuid.UUID) error {
+func (uc *RecurringTransactionUsecase) Resume(ctx context.Context, id uuid.UUID, onConflict string) error {
 	rt, err := uc.recurringRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -74,18 +74,87 @@ func (uc *RecurringTransactionUsecase) Resume(ctx context.Context, id uuid.UUID)
 		return domain.ErrAlreadyActive
 	}
 
+	now := time.Now()
+	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	lastDay := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, time.UTC)
+
+	existing, err := uc.transactionRepo.FindByRecurringIDAndDateRange(
+		ctx, id, firstDay.Format("2006-01-02"), lastDay.Format("2006-01-02"),
+	)
+	if err != nil {
+		return err
+	}
+
+	hasConflict := len(existing) > 0
+
+	if hasConflict && onConflict == "" {
+		return &entity.ResumeConflictError{ExistingTransactions: existing}
+	}
+
 	if err := uc.recurringRepo.Resume(ctx, id); err != nil {
 		return err
 	}
 
-	now := time.Now()
-	resumeStart := computeResumeStart(rt, now)
-
-	// Refresh rt after resume
 	rt.IsActive = true
 	rt.PausedAt = nil
 
+	if hasConflict && onConflict == "update" {
+		if err := uc.updateExistingTransactions(ctx, rt, existing, firstDay, lastDay); err != nil {
+			return err
+		}
+		// Generate future transactions from next month onward
+		nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+		return uc.generateTransactions(ctx, rt, nextMonth.Format("2006-01-02"))
+	}
+
+	// onConflict == "create" or no conflict: generate normally
+	resumeStart := computeResumeStart(rt, now)
 	return uc.generateTransactions(ctx, rt, resumeStart)
+}
+
+func (uc *RecurringTransactionUsecase) updateExistingTransactions(ctx context.Context, rt *entity.RecurringTransaction, existing []entity.Transaction, firstDay, lastDay time.Time) error {
+	expectedDates := computeAllDates(rt, firstDay, lastDay)
+
+	existingByDate := make(map[string]entity.Transaction)
+	for _, tx := range existing {
+		existingByDate[tx.Date] = tx
+	}
+
+	var toUpdate []entity.Transaction
+	var toCreate []entity.Transaction
+
+	for _, d := range expectedDates {
+		dateStr := d.Format("2006-01-02")
+		if ex, ok := existingByDate[dateStr]; ok {
+			ex.Type = rt.Type
+			ex.Amount = rt.Amount
+			ex.Description = rt.Description
+			ex.CategoryID = rt.CategoryID
+			toUpdate = append(toUpdate, ex)
+		} else {
+			toCreate = append(toCreate, entity.Transaction{
+				UserID:      rt.UserID,
+				CategoryID:  rt.CategoryID,
+				Type:        rt.Type,
+				Amount:      rt.Amount,
+				Description: rt.Description,
+				Date:        dateStr,
+				RecurringID: &rt.ID,
+			})
+		}
+	}
+
+	if len(toUpdate) > 0 {
+		if err := uc.transactionRepo.BulkUpdate(ctx, toUpdate); err != nil {
+			return err
+		}
+	}
+	if len(toCreate) > 0 {
+		if err := uc.transactionRepo.BulkCreate(ctx, toCreate); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (uc *RecurringTransactionUsecase) List(ctx context.Context, userID uuid.UUID, filter entity.RecurringTransactionFilter) (*entity.PaginatedRecurringTransactions, error) {

@@ -36,3 +36,11 @@ type PaginatedTransactions struct {
 	PerPage    int           `json:"per_page"`
 	TotalPages int           `json:"total_pages"`
 }
+
+type ResumeConflictError struct {
+	ExistingTransactions []Transaction
+}
+
+func (e *ResumeConflictError) Error() string {
+	return "resume conflict: transactions already exist for current month"
+}

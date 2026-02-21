@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -29,6 +30,10 @@ type recurringTransactionRequest struct {
 	EndDate        *string `json:"end_date"`
 	MaxOccurrences *int    `json:"max_occurrences"`
 	DayOfMonth     *int    `json:"day_of_month"`
+}
+
+type resumeRequest struct {
+	OnConflict string `json:"on_conflict"`
 }
 
 type deleteRecurringRequest struct {
@@ -134,7 +139,23 @@ func (h *RecurringTransactionHandler) Resume(c *gin.Context) {
 		return
 	}
 
-	if err := h.uc.Resume(c.Request.Context(), id); err != nil {
+	var req resumeRequest
+	_ = c.ShouldBindJSON(&req)
+
+	if req.OnConflict != "" && req.OnConflict != "create" && req.OnConflict != "update" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "on_conflict must be 'create' or 'update'"})
+		return
+	}
+
+	if err := h.uc.Resume(c.Request.Context(), id, req.OnConflict); err != nil {
+		var conflictErr *entity.ResumeConflictError
+		if errors.As(err, &conflictErr) {
+			c.JSON(http.StatusConflict, gin.H{
+				"conflict":              true,
+				"existing_transactions": conflictErr.ExistingTransactions,
+			})
+			return
+		}
 		status := mapDomainError(err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return

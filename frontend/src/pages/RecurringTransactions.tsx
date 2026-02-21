@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { recurringTransactionService } from '../services/recurring-transactions';
-import type { RecurringTransaction, RecurringDeleteMode, RecurrenceFrequency } from '../types';
+import type { RecurringTransaction, RecurringDeleteMode, RecurrenceFrequency, ResumeConflictStrategy, Transaction } from '../types';
 import Modal from '../components/ui/Modal';
 import Pagination from '../components/ui/Pagination';
 import toast from 'react-hot-toast';
@@ -34,6 +34,8 @@ export default function RecurringTransactions() {
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<RecurringTransaction | null>(null);
   const [deleteMode, setDeleteMode] = useState<RecurringDeleteMode>('all');
+  const [resumeConflict, setResumeConflict] = useState<{ recurrence: RecurringTransaction; existingTransactions: Transaction[] } | null>(null);
+  const [conflictStrategy, setConflictStrategy] = useState<ResumeConflictStrategy>('update');
 
   const { data: result, isLoading } = useQuery({
     queryKey: ['recurring-transactions', page],
@@ -69,12 +71,24 @@ export default function RecurringTransactions() {
   });
 
   const resumeMutation = useMutation({
-    mutationFn: (id: string) => recurringTransactionService.resume(id),
+    mutationFn: ({ id, onConflict }: { id: string; onConflict?: ResumeConflictStrategy }) =>
+      recurringTransactionService.resume(id, onConflict),
     onSuccess: () => {
       invalidateAll();
+      setResumeConflict(null);
       toast.success('Recorrência retomada');
     },
-    onError: (err: AxiosError<{ error: string }>) => toast.error(err.response?.data?.error || 'Erro ao retomar'),
+    onError: (err: AxiosError<{ conflict?: boolean; existing_transactions?: Transaction[]; error?: string }>, variables) => {
+      if (err.response?.status === 409 && err.response.data?.conflict) {
+        const rt = result?.data.find((r) => r.id === variables.id);
+        if (rt) {
+          setResumeConflict({ recurrence: rt, existingTransactions: err.response.data.existing_transactions || [] });
+          setConflictStrategy('update');
+        }
+        return;
+      }
+      toast.error(err.response?.data?.error || 'Erro ao retomar');
+    },
   });
 
   const openDelete = (rt: RecurringTransaction) => {
@@ -131,7 +145,7 @@ export default function RecurringTransactions() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => resumeMutation.mutate(rt.id)}
+                        onClick={() => resumeMutation.mutate({ id: rt.id })}
                         disabled={resumeMutation.isPending}
                         className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                         title="Retomar"
@@ -207,7 +221,7 @@ export default function RecurringTransactions() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => resumeMutation.mutate(rt.id)}
+                              onClick={() => resumeMutation.mutate({ id: rt.id })}
                               disabled={resumeMutation.isPending}
                               className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                               title="Retomar"
@@ -292,6 +306,70 @@ export default function RecurringTransactions() {
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
               Excluir
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Resume Conflict Modal */}
+      <Modal
+        isOpen={!!resumeConflict}
+        onClose={() => setResumeConflict(null)}
+        title="Conflito ao Retomar"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Já existem transações para o mês atual vinculadas a <strong>{resumeConflict?.recurrence.description || resumeConflict?.recurrence.category_name}</strong>:
+          </p>
+          <div className="max-h-40 overflow-y-auto space-y-2">
+            {resumeConflict?.existingTransactions.map((tx) => (
+              <div key={tx.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                <span className="text-gray-700">{formatDate(tx.date)}</span>
+                <span className={`font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(tx.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="conflictStrategy"
+                value="update"
+                checked={conflictStrategy === 'update'}
+                onChange={() => setConflictStrategy('update')}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Atualizar o existente</span>
+            </label>
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="radio"
+                name="conflictStrategy"
+                value="create"
+                checked={conflictStrategy === 'create'}
+                onChange={() => setConflictStrategy('create')}
+                className="text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Criar novo lançamento</span>
+            </label>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setResumeConflict(null)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => resumeConflict && resumeMutation.mutate({ id: resumeConflict.recurrence.id, onConflict: conflictStrategy })}
+              disabled={resumeMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Confirmar
             </button>
           </div>
         </div>
