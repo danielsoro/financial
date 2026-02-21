@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/logo.svg" alt="DNA Fami" width="64" height="64" />
+  <img src="frontend/public/assets/logo.svg" alt="DNA Fami" width="64" height="64" />
 </p>
 
 <h1 align="center">DNA Fami</h1>
